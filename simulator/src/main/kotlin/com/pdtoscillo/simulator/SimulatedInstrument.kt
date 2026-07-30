@@ -58,20 +58,24 @@ class SimulatedInstrument(private val config: SimulatorConfig) {
         settings["DATA:STOP"] = DEFAULT_RECORD_LENGTH.toString()
         settings["DATA:ENCDG"] = "RIBINARY"
         settings["DATA:WIDTH"] = "1"
+        settings["ACQUIRE:FASTACQ:STATE"] = "0"
         settings["TRIGGER:A:TYPE"] = "EDGE"
+        settings["TRIGGER:A:MODE"] = "AUTO"
+        settings["TRIGGER:A:PULSE:CLASS"] = "WIDTH"
+        settings["TRIGGER:A:LOGIC:CLASS"] = "LOGIC"
         settings["TRIGGER:A:EDGE:SOURCE"] = "CH1"
         settings["TRIGGER:A:EDGE:SLOPE"] = "RISE"
         settings["TRIGGER:A:EDGE:COUPLING"] = "DC"
-        settings["TRIGGER:A:LEVEL"] = "0.0000"
         settings["TRIGGER:A:HOLDOFF:TIME"] = "20.0000E-9"
         for (channel in 1..model.analogChannels) {
+            settings["TRIGGER:A:LEVEL:CH$channel"] = "0.0000"
             settings["CH$channel:SCALE"] = formatEng(DEFAULT_VERTICAL_SCALE)
             settings["CH$channel:POSITION"] = "0.0000"
             settings["CH$channel:OFFSET"] = "0.0000"
             settings["CH$channel:COUPLING"] = "DC"
             settings["CH$channel:BANDWIDTH"] = "FULL"
             settings["CH$channel:INVERT"] = "0"
-            settings["CH$channel:LABEL:NAME"] = "\"\""
+            settings["CH$channel:LABEL"] = "\"\""
             settings["CH$channel:TERMINATION"] = "1.0000E+6"
             settings["CH$channel:DESKEW"] = "0.0000"
             settings["CH$channel:PROBE:GAIN"] = "1.0000"
@@ -290,6 +294,8 @@ class SimulatedInstrument(private val config: SimulatorConfig) {
         }
 
         "HORIZONTAL:SAMPLERATE" -> if (isQuery) SimulatedResponse.Text("2.5000E+9") else null
+
+        "ACQUIRE:NUMACQ" -> if (isQuery) SimulatedResponse.Text("42") else null
 
         "SELECT" -> if (isQuery) SimulatedResponse.Text(displayedSources.joinToString(";")) else null
 

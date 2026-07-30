@@ -5,6 +5,7 @@ import com.pdtoscillo.core.common.CommunicationLogRecorder
 import com.pdtoscillo.core.model.ConnectionConfig
 import com.pdtoscillo.core.model.SocketBindStrategy
 import com.pdtoscillo.core.scpi.ScpiClient
+import com.pdtoscillo.core.scpi.Tektronix4000Driver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,9 @@ class InstrumentSession(context: Context) {
     val logRecorder: CommunicationLogRecorder = CommunicationLogRecorder()
 
     val client: ScpiClient = ScpiClient(transport, logRecorder)
+
+    /** 高レベル操作。画面はこれを通して計測器を操作する。 */
+    val driver: Tektronix4000Driver = Tektronix4000Driver(client)
 
     val diagnostics: ConnectionDiagnostics = ConnectionDiagnostics(networkMonitor, client)
 

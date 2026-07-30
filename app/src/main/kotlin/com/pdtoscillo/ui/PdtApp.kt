@@ -29,6 +29,9 @@ import com.pdtoscillo.core.ui.component.UnavailableNotice
 import com.pdtoscillo.feature.connection.ConnectionScreen
 import com.pdtoscillo.feature.connection.ConnectionViewModel
 import com.pdtoscillo.feature.connection.EscopeScreen
+import com.pdtoscillo.feature.oscilloscope.ChannelsScreen
+import com.pdtoscillo.feature.oscilloscope.OscilloscopeViewModel
+import com.pdtoscillo.feature.oscilloscope.OverviewScreen
 import com.pdtoscillo.navigation.ESCOPE_ROUTE
 import com.pdtoscillo.navigation.ESCOPE_URL_ARG
 import com.pdtoscillo.navigation.PdtDestination
@@ -95,9 +98,28 @@ fun PdtApp(session: InstrumentSession) {
                 }
             }
 
-            // Phase 2 以降で実装する画面。未実装であることを画面上で明示する。
+            composable(PdtDestination.OVERVIEW.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    OverviewScreen(
+                        viewModel = viewModel(factory = OscilloscopeViewModel.factory(session)),
+                        onOpenChannels = { navController.navigate(PdtDestination.CHANNELS.route) },
+                    )
+                }
+            }
+
+            composable(PdtDestination.CHANNELS.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    ChannelsScreen(viewModel = viewModel(factory = OscilloscopeViewModel.factory(session)))
+                }
+            }
+
+            // Phase 3 以降で実装する画面。未実装であることを画面上で明示する。
             PdtDestination.entries
-                .filter { it != PdtDestination.CONNECTION }
+                .filter { it !in IMPLEMENTED_DESTINATIONS }
                 .forEach { destination ->
                     composable(destination.route) {
                         if (destination.requiresConnection && !connectionState.isConnected) {
@@ -110,6 +132,13 @@ fun PdtApp(session: InstrumentSession) {
         }
     }
 }
+
+/** 既に実装済みで、個別に composable を登録している画面。 */
+private val IMPLEMENTED_DESTINATIONS = setOf(
+    PdtDestination.CONNECTION,
+    PdtDestination.OVERVIEW,
+    PdtDestination.CHANNELS,
+)
 
 @Composable
 private fun RequiresConnection() {
