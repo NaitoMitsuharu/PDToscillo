@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 既定ロケール = 日本語 -->
+<resources>
+    <string name="app_name">PDToscillo</string>
+    <string name="nav_connection">接続</string>
+    <string name="nav_overview">概要</string>
+    <string name="nav_waveform">波形</string>
+    <string name="nav_measurement">測定</string>
+    <string name="nav_automation">自動測定</string>
+    <string name="nav_files">ファイル</string>
+    <string name="nav_console">コンソール</string>
+    <string name="nav_settings">設定</string>
+</resources>

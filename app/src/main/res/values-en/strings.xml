@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDToscillo</string>
+    <string name="nav_connection">Connection</string>
+    <string name="nav_overview">Overview</string>
+    <string name="nav_waveform">Waveform</string>
+    <string name="nav_measurement">Measure</string>
+    <string name="nav_automation">Automation</string>
+    <string name="nav_files">Files</string>
+    <string name="nav_console">Console</string>
+    <string name="nav_settings">Settings</string>
+</resources>

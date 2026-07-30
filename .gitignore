@@ -1,0 +1,26 @@
+# Android / Gradle
+.gradle/
+.kotlin/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keystore
+*.jks
+*.keystore
+
+# 参照用に手元へ置く Tektronix 公式マニュアル（再配布しない）
+*.pdf
+docs/vendor-manuals/
+
+# 実行時に生成される波形・ログ
+*.hprof
+*.pdtwfm
+waveform-exports/
+review-screenshots/

@@ -1,0 +1,15 @@
+* text=auto eol=lf
+
+# Unix 上で実行される必要があるため必ず LF
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows 専用スクリプト
+*.bat text eol=crlf
+
+# バイナリ
+*.jar binary
+*.png binary
+*.jpg binary
+*.pdf binary
+*.pdtwfm binary
