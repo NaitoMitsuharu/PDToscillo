@@ -13,6 +13,7 @@ dependencies {
     // SCPI のワイヤ形式（テキスト行と IEEE 488.2 ブロックの切り出し）は core:scpi が持つ。
     // Transport はソケットと Android のネットワーク選択に責務を絞り、フレーミングを再実装しない。
     api(project(":core:scpi"))
+    implementation(project(":core:waveform"))
     implementation(libs.okio)
 
     // Raw socket の統合テストは疑似オシロスコープへ実際に TCP 接続する。

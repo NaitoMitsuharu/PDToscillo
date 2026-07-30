@@ -351,7 +351,16 @@ class SimulatedInstrument(private val config: SimulatorConfig) {
      * ヘッダ有効時は `:WFMOUTPRE:BYT_NR 1;BIT_NR 8;...` の形になる。
      */
     private fun buildPreamble(): String {
-        val fields = preambleFields()
+        // マニュアル記載の挙動: DATa:SOUrce の波形が表示されていない場合は
+        // 転送パラメータ (BYT_Nr, BIT_Nr, ENCdg, BN_Fmt, BYT_Or) だけを返し、
+        // 「source waveform is not turned on」のイベントを積む。
+        // スケーリング項目が欠けるため、受信側はここで気付けなければならない。
+        val fields = if (isSourceDisplayed()) {
+            preambleFields()
+        } else {
+            pushEvent(EVENT_EXECUTION_ERROR, "Source waveform is not turned on")
+            LinkedHashMap(preambleFields().entries.take(TRANSMISSION_FIELD_COUNT).associate { it.key to it.value })
+        }
         return if (headerEnabled) {
             fields.entries.mapIndexed { index, entry ->
                 if (index == 0) ":WFMOUTPRE:${entry.key} ${entry.value}" else "${entry.key} ${entry.value}"
@@ -393,9 +402,15 @@ class SimulatedInstrument(private val config: SimulatorConfig) {
         return fields
     }
 
+    /** DATa:SOUrce が指す波形が表示されているか。 */
+    private fun isSourceDisplayed(): Boolean {
+        val source = settings["DATA:SOURCE"] ?: "CH1"
+        return source.uppercase(Locale.US) in displayedSources.map { it.uppercase(Locale.US) }
+    }
+
     private fun buildCurve(): SimulatedResponse {
         val source = settings["DATA:SOURCE"] ?: "CH1"
-        if (source.uppercase(Locale.US) !in displayedSources.map { it.uppercase(Locale.US) }) {
+        if (!isSourceDisplayed()) {
             pushEvent(EVENT_EXECUTION_ERROR, "Source waveform is not turned on; $source")
             return SimulatedResponse.None
         }
@@ -490,6 +505,9 @@ class SimulatedInstrument(private val config: SimulatorConfig) {
         private const val DEFAULT_RECORD_LENGTH = 10_000
         private const val MAX_POINT_COUNT = 1_000_000
         private const val MAX_EVENT_QUEUE = 32
+
+        /** 波形が非表示のときに返る転送パラメータの数 (BYT_NR, BIT_NR, ENCDG, BN_FMT, BYT_OR)。 */
+        private const val TRANSMISSION_FIELD_COUNT = 5
         private const val DEFAULT_HORIZONTAL_SCALE = 4.0e-6
         private const val DEFAULT_VERTICAL_SCALE = 0.1
         private const val BAD_LENGTH_DELTA = 128L

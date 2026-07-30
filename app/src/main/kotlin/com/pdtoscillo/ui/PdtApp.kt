@@ -12,8 +12,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -24,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.pdtoscillo.R
+import com.pdtoscillo.core.database.export.WaveformExporter
 import com.pdtoscillo.core.network.InstrumentSession
 import com.pdtoscillo.core.ui.component.UnavailableNotice
 import com.pdtoscillo.feature.connection.ConnectionScreen
@@ -32,6 +35,8 @@ import com.pdtoscillo.feature.connection.EscopeScreen
 import com.pdtoscillo.feature.oscilloscope.ChannelsScreen
 import com.pdtoscillo.feature.oscilloscope.OscilloscopeViewModel
 import com.pdtoscillo.feature.oscilloscope.OverviewScreen
+import com.pdtoscillo.feature.waveform.WaveformScreen
+import com.pdtoscillo.feature.waveform.WaveformViewModel
 import com.pdtoscillo.navigation.ESCOPE_ROUTE
 import com.pdtoscillo.navigation.ESCOPE_URL_ARG
 import com.pdtoscillo.navigation.PdtDestination
@@ -117,7 +122,19 @@ fun PdtApp(session: InstrumentSession) {
                 }
             }
 
-            // Phase 3 以降で実装する画面。未実装であることを画面上で明示する。
+            composable(PdtDestination.WAVEFORM.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    val context = LocalContext.current
+                    val exporter = remember(context) { WaveformExporter(context.applicationContext) }
+                    WaveformScreen(
+                        viewModel = viewModel(factory = WaveformViewModel.factory(session, exporter)),
+                    )
+                }
+            }
+
+            // Phase 4 以降で実装する画面。未実装であることを画面上で明示する。
             PdtDestination.entries
                 .filter { it !in IMPLEMENTED_DESTINATIONS }
                 .forEach { destination ->
@@ -138,6 +155,7 @@ private val IMPLEMENTED_DESTINATIONS = setOf(
     PdtDestination.CONNECTION,
     PdtDestination.OVERVIEW,
     PdtDestination.CHANNELS,
+    PdtDestination.WAVEFORM,
 )
 
 @Composable
