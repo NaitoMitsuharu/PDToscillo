@@ -27,5 +27,6 @@
     <string name="action_confirm">Apply</string>
 
     <string name="requires_connection">This screen becomes available after connecting to the oscilloscope. Connect from the Connection screen first.</string>
+    <string name="menu_more">More menu</string>
     <string name="escope_title">e*Scope</string>
 </resources>

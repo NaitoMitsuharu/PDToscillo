@@ -38,6 +38,14 @@ enum class PdtDestination(val route: String, val labelRes: Int, val icon: ImageV
         /** 下部ナビゲーションへ出す主要画面。全部並べると小さくなりすぎるため絞る。 */
         val bottomBar: List<PdtDestination> = listOf(CONNECTION, OVERVIEW, WAVEFORM, MEASUREMENT, CONSOLE)
 
+        /**
+         * 上部メニューから開く画面。
+         *
+         * 下部ナビゲーションへ全 10 画面を並べると 1 つずつが小さくなりすぎるため、
+         * 主要 5 画面以外はこちらから開く。実装済みなのに到達できない画面を作らない。
+         */
+        val overflowMenu: List<PdtDestination> = entries.filterNot { it in bottomBar }
+
         fun fromRoute(route: String?): PdtDestination? = entries.firstOrNull { it.route == route }
     }
 }

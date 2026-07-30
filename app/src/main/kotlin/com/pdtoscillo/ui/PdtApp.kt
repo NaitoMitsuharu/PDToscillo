@@ -4,18 +4,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,6 +66,7 @@ import java.io.File
 import java.net.URLDecoder
 import java.net.URLEncoder
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdtApp(session: InstrumentSession) {
     val navController = rememberNavController()
@@ -63,7 +74,25 @@ fun PdtApp(session: InstrumentSession) {
     val currentRoute = backStackEntry?.destination?.route
     val connectionState by session.client.connectionState.collectAsStateWithLifecycle()
 
+    fun navigateTo(destination: PdtDestination) {
+        if (currentRoute != destination.route) {
+            navController.navigate(destination.route) {
+                popUpTo(PdtDestination.CONNECTION.route)
+                launchSingleTop = true
+            }
+        }
+    }
+
     Scaffold(
+        topBar = {
+            // 下部ナビゲーションへ 10 画面を並べると 1 つずつが小さくなりすぎるため、
+            // 主要 5 画面を下部に置き、残りはここのメニューから開く。
+            PdtTopBar(
+                currentRoute = currentRoute,
+                connected = connectionState.isConnected,
+                onSelect = ::navigateTo,
+            )
+        },
         bottomBar = {
             NavigationBar {
                 PdtDestination.bottomBar.forEach { destination ->
@@ -71,14 +100,7 @@ fun PdtApp(session: InstrumentSession) {
                     NavigationBarItem(
                         selected = currentRoute == destination.route,
                         enabled = enabled,
-                        onClick = {
-                            if (currentRoute != destination.route) {
-                                navController.navigate(destination.route) {
-                                    popUpTo(PdtDestination.CONNECTION.route)
-                                    launchSingleTop = true
-                                }
-                            }
-                        },
+                        onClick = { navigateTo(destination) },
                         icon = { Icon(destination.icon, contentDescription = null) },
                         label = { Text(stringResource(destination.labelRes)) },
                     )
@@ -235,6 +257,52 @@ private val IMPLEMENTED_DESTINATIONS = setOf(
     PdtDestination.AUTOMATION,
     PdtDestination.SETTINGS,
 )
+
+/**
+ * 上部バー。
+ *
+ * 下部ナビゲーションに載らない画面（チャンネル / トリガ / オプション / ファイル /
+ * 自動測定 / 設定）はここのメニューから開く。実装済みなのに到達できない画面を作らない。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PdtTopBar(currentRoute: String?, connected: Boolean, onSelect: (PdtDestination) -> Unit) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val current = PdtDestination.fromRoute(currentRoute)
+
+    TopAppBar(
+        title = {
+            Text(
+                text = current?.let { stringResource(it.labelRes) } ?: stringResource(R.string.app_name),
+            )
+        },
+        actions = {
+            IconButton(
+                onClick = { menuExpanded = true },
+                modifier = Modifier.testTag(TOP_BAR_MENU_TAG),
+            ) {
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu_more))
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                PdtDestination.overflowMenu.forEach { destination ->
+                    val enabled = !destination.requiresConnection || connected
+                    DropdownMenuItem(
+                        text = { Text(stringResource(destination.labelRes)) },
+                        leadingIcon = { Icon(destination.icon, contentDescription = null) },
+                        enabled = enabled,
+                        onClick = {
+                            menuExpanded = false
+                            onSelect(destination)
+                        },
+                    )
+                }
+            }
+        },
+    )
+}
+
+/** UI テストからメニューを開くための目印。 */
+const val TOP_BAR_MENU_TAG = "topBarMenu"
 
 @Composable
 private fun RequiresConnection() {

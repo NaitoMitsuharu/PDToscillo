@@ -28,5 +28,6 @@
     <string name="action_confirm">実行</string>
 
     <string name="requires_connection">この画面はオシロスコープへ接続してから利用できます。まず「接続」画面で接続してください。</string>
+    <string name="menu_more">その他のメニュー</string>
     <string name="escope_title">e*Scope</string>
 </resources>
