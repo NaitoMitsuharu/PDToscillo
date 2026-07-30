@@ -17,11 +17,12 @@ PDT-FP1 では Ethernet・Wi-Fi・モバイル回線が同時に有効になり�
 
 ## 状態
 
-現在 Phase 0（プロジェクト基盤）まで完了しています。実装の進行状況は
-[docs/hardware-validation.md](docs/hardware-validation.md) と併せて確認してください。
+実装の進行状況です。**実機は未接続**のため、検証済みの範囲は
+[docs/hardware-validation.md](docs/hardware-validation.md) で「自動テスト済み」と
+「実機確認が必要」に分けて記載しています。
 
 - [x] Phase 0: マルチモジュール構成、ビルド基盤、静的解析
-- [ ] Phase 1: Ethernet 検出・ソケットバインド・TCP 接続・`*IDN?`・接続診断・疑似サーバー
+- [x] Phase 1: Ethernet 検出・ソケットバインド・TCP 接続・`*IDN?`・接続診断・疑似サーバー
 - [ ] Phase 2: SCPI コマンドキュー・エラー処理・Capability 検出・チャンネル設定
 - [ ] Phase 3: 波形転送・バイナリブロック解析・Compose 描画・CSV/PNG 保存
 - [ ] Phase 4: 水平軸・Acquisition・Trigger・Measurement・Cursor・Math/Reference

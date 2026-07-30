@@ -63,4 +63,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
 
     androidTestImplementation(libs.androidx.espresso.core)
+
+    // UI テストでも実機を使わず、疑似オシロスコープを端末内で起動して検証する。
+    androidTestImplementation(project(":simulator"))
 }

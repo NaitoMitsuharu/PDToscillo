@@ -1,12 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PDToscillo</string>
+
     <string name="nav_connection">Connection</string>
     <string name="nav_overview">Overview</string>
     <string name="nav_waveform">Waveform</string>
+    <string name="nav_channels">Channels</string>
     <string name="nav_measurement">Measure</string>
     <string name="nav_automation">Automation</string>
     <string name="nav_files">Files</string>
     <string name="nav_console">Console</string>
     <string name="nav_settings">Settings</string>
+
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connecting">Connecting</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_reconnecting">Reconnecting</string>
+    <string name="status_failed">Connection failed</string>
+    <string name="status_read_only">Read-only</string>
+    <string name="status_writable">Writable</string>
+
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_confirm">Apply</string>
+
+    <string name="requires_connection">This screen becomes available after connecting to the oscilloscope. Connect from the Connection screen first.</string>
+    <string name="escope_title">e*Scope</string>
 </resources>

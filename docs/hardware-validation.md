@@ -107,9 +107,45 @@
 
 ## 自動テスト済み（実機不要）
 
-疑似オシロスコープ（`:simulator`）を相手に自動テストで検証済みの項目は、
-Phase の進行に合わせてここへ追記します。
+疑似オシロスコープ（`:simulator`）を相手に自動テストで検証済みの項目です。
+**実機で確認したことにはなりません。** 上記の HARDWARE_VALIDATION_REQUIRED とは明確に区別しています。
 
-| 項目 | 状態 |
-| --- | --- |
-| （Phase 1 以降で追記） | — |
+### Phase 1
+
+| 項目 | 検証内容 | テスト |
+| --- | --- | --- |
+| TCP 接続 | 接続 → `*IDN?` → 応答解析 | `RawSocketTransportIntegrationTest` |
+| 応答の分割受信 | 3 バイトずつ届く状況でテキスト応答を解析 | 同上 |
+| バイナリの分割受信 | 13 バイトずつ届く 5,000 点の `CURVe?` を読み切る | 同上 |
+| 16 bit 波形 | `DATa:WIDth 2` で 1,000 点 = 2,000 バイト | 同上 |
+| 不正なブロック長 | 宣言長と実データの不一致を検出 | 同上 |
+| 過大なブロック長 | 上限超過を拒否しメモリを確保しない | 同上 |
+| 読み取りタイムアウト | 応答が返らない場合の分類と再試行可否 | 同上 |
+| 応答途中の切断 | 不完全な応答を成功として扱わない | 同上 |
+| 切断 → 再接続 | 再接続後も `*IDN?` が取れる | 同上 |
+| 同期喪失からの復帰 | タイムアウト後に遅延応答を破棄し、次の応答がずれない | 同上 |
+| コマンドの直列化 | 5 本同時発行でも応答の取り違えが起きない | 同上 |
+| 読み取り専用モード | 設定変更を拒否し、値が変わらない | 同上 |
+| 設定の読み戻し | 変更前 → 設定 → 再 Query で受理値を取得 | 同上 |
+| 未定義コマンド | 応答なし + イベント 113 を検出し、クラッシュしない | 同上 |
+| Terminal プロトコル検出 | エコーを検出し None への変更を案内 | 同上 |
+| 通信ログ | バイナリ本体を残さずサイズと SHA-256 のみ記録 | 同上 |
+| Capability（Configuration 経路） | `CONFIGuration:*?` から 4ch/16ch/RF/AFG/DVM/バスを取得 | `CapabilityDetectionIntegrationTest` |
+| Capability（フォールバック経路） | 未定義ヘッダー検出 → モデル名推定へ切り替え | 同上 |
+| Capability の過大評価防止 | 判定不能なオプションを有効化せず「不明」として記録 | 同上 |
+| 検出の非破壊性 | 検出前後で設定値が変化しない | 同上 |
+| `*IDN?` 解析 | 4 要素 / 要素不足 / ヘッダ付き / 他社製 | `IdnParserTest` |
+| モデル名推定 | DPO/MSO/MDO、2ch/4ch、世代、4000 系以外 | `ModelNameResolverTest` |
+| 応答解析 | 引用符内の区切り文字、ヘッダ有無、複合応答 | `ScpiResponseParserTest` |
+| IEEE 488.2 ブロック | 1 バイトずつの受信、CRLF 終端、`#0` 非対応、異常長 | `ScpiBinaryBlockReaderTest` |
+| エラー分類 | マニュアル Table 3-5 / 3-6 の実コード | `ScpiErrorQueueTest` |
+| 危険コマンド判定 | `*RST` / `FACTORY` / ファイル削除 / AFG 出力 ON | `ScpiDangerClassifierTest` |
+| 工学単位 | ns/µs/mV/MHz の整形と `1.5n` などの解釈 | `EngineeringUnitsTest` |
+| 接続画面 UI | 表示、入力検証、接続、エラーと対処の表示、読み取り専用 | `ConnectionScreenTest`（エミュレータ実行） |
+
+実行方法:
+
+```bash
+./gradlew testDebugUnitTest :core:common:test :core:scpi:test
+./gradlew :app:connectedDebugAndroidTest
+```

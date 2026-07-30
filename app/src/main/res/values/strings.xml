@@ -2,12 +2,29 @@
 <!-- 既定ロケール = 日本語 -->
 <resources>
     <string name="app_name">PDToscillo</string>
+
     <string name="nav_connection">接続</string>
     <string name="nav_overview">概要</string>
     <string name="nav_waveform">波形</string>
+    <string name="nav_channels">チャンネル</string>
     <string name="nav_measurement">測定</string>
     <string name="nav_automation">自動測定</string>
     <string name="nav_files">ファイル</string>
     <string name="nav_console">コンソール</string>
     <string name="nav_settings">設定</string>
+
+    <string name="status_disconnected">未接続</string>
+    <string name="status_connecting">接続処理中</string>
+    <string name="status_connected">接続中</string>
+    <string name="status_reconnecting">再接続中</string>
+    <string name="status_failed">接続失敗</string>
+    <string name="status_read_only">読み取り専用</string>
+    <string name="status_writable">設定変更可</string>
+
+    <string name="action_back">戻る</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_confirm">実行</string>
+
+    <string name="requires_connection">この画面はオシロスコープへ接続してから利用できます。まず「接続」画面で接続してください。</string>
+    <string name="escope_title">e*Scope</string>
 </resources>
