@@ -9,6 +9,7 @@
     <string name="nav_channels">チャンネル</string>
     <string name="nav_trigger">トリガ</string>
     <string name="nav_measurement">測定</string>
+    <string name="nav_options">オプション</string>
     <string name="nav_automation">自動測定</string>
     <string name="nav_files">ファイル</string>
     <string name="nav_console">コンソール</string>

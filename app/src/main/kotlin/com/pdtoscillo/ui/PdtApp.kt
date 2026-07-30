@@ -32,9 +32,15 @@ import com.pdtoscillo.core.ui.component.UnavailableNotice
 import com.pdtoscillo.feature.connection.ConnectionScreen
 import com.pdtoscillo.feature.connection.ConnectionViewModel
 import com.pdtoscillo.feature.connection.EscopeScreen
+import com.pdtoscillo.feature.console.ConsoleScreen
+import com.pdtoscillo.feature.console.ConsoleViewModel
+import com.pdtoscillo.feature.files.FilesScreen
+import com.pdtoscillo.feature.files.FilesViewModel
 import com.pdtoscillo.feature.measurement.MeasurementScreen
 import com.pdtoscillo.feature.measurement.MeasurementViewModel
 import com.pdtoscillo.feature.oscilloscope.ChannelsScreen
+import com.pdtoscillo.feature.oscilloscope.OptionsScreen
+import com.pdtoscillo.feature.oscilloscope.OptionsViewModel
 import com.pdtoscillo.feature.oscilloscope.OscilloscopeViewModel
 import com.pdtoscillo.feature.oscilloscope.OverviewScreen
 import com.pdtoscillo.feature.oscilloscope.TriggerScreen
@@ -43,6 +49,7 @@ import com.pdtoscillo.feature.waveform.WaveformViewModel
 import com.pdtoscillo.navigation.ESCOPE_ROUTE
 import com.pdtoscillo.navigation.ESCOPE_URL_ARG
 import com.pdtoscillo.navigation.PdtDestination
+import java.io.File
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -153,7 +160,33 @@ fun PdtApp(session: InstrumentSession) {
                 }
             }
 
-            // Phase 5 以降で実装する画面。未実装であることを画面上で明示する。
+            composable(PdtDestination.OPTIONS.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    OptionsScreen(viewModel = viewModel(factory = OptionsViewModel.factory(session)))
+                }
+            }
+
+            composable(PdtDestination.CONSOLE.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    ConsoleScreen(viewModel = viewModel(factory = ConsoleViewModel.factory(session)))
+                }
+            }
+
+            composable(PdtDestination.FILES.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    val context = LocalContext.current
+                    val downloadDir = remember(context) { File(context.filesDir, "downloads") }
+                    FilesScreen(viewModel = viewModel(factory = FilesViewModel.factory(session, downloadDir)))
+                }
+            }
+
+            // Phase 6 で実装する画面。未実装であることを画面上で明示する。
             PdtDestination.entries
                 .filter { it !in IMPLEMENTED_DESTINATIONS }
                 .forEach { destination ->
@@ -177,6 +210,9 @@ private val IMPLEMENTED_DESTINATIONS = setOf(
     PdtDestination.WAVEFORM,
     PdtDestination.TRIGGER,
     PdtDestination.MEASUREMENT,
+    PdtDestination.OPTIONS,
+    PdtDestination.CONSOLE,
+    PdtDestination.FILES,
 )
 
 @Composable

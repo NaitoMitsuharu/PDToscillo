@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
@@ -26,6 +27,7 @@ enum class PdtDestination(val route: String, val labelRes: Int, val icon: ImageV
     CHANNELS("channels", R.string.nav_channels, Icons.Filled.Tune, requiresConnection = true),
     TRIGGER("trigger", R.string.nav_trigger, Icons.Filled.Bolt, requiresConnection = true),
     MEASUREMENT("measurement", R.string.nav_measurement, Icons.Filled.Speed, requiresConnection = true),
+    OPTIONS("options", R.string.nav_options, Icons.Filled.Extension, requiresConnection = true),
     AUTOMATION("automation", R.string.nav_automation, Icons.Filled.PlayCircle, requiresConnection = true),
     FILES("files", R.string.nav_files, Icons.Filled.Folder, requiresConnection = true),
     CONSOLE("console", R.string.nav_console, Icons.Filled.Terminal, requiresConnection = true),
