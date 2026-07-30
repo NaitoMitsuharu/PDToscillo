@@ -37,6 +37,14 @@ class InstrumentSession(context: Context) {
 
     val discovery: DeviceDiscovery = DeviceDiscovery()
 
+    /**
+     * 実機接続時の調査用ログ。
+     *
+     * メモリ上の [logRecorder] は件数上限があり、アプリを閉じると消える。
+     * 実機で初めて接続するときのやり取りを後から追えるよう、ファイルへも残す。
+     */
+    val sessionLogger: SessionLogger = SessionLogger(context, logRecorder, networkMonitor)
+
     val networkStatus: StateFlow<NetworkStatus> = networkMonitor.status
 
     private val _lastConfig = MutableStateFlow(

@@ -119,12 +119,14 @@ fun PdtApp(session: InstrumentSession) {
                 val viewModel: ConnectionViewModel = viewModel(
                     factory = ConnectionViewModel.factory(session),
                 )
+                val context = LocalContext.current
                 ConnectionScreen(
                     viewModel = viewModel,
                     onOpenEscope = { url ->
                         val encoded = URLEncoder.encode(url, Charsets.UTF_8.name())
                         navController.navigate("$ESCOPE_ROUTE/$encoded")
                     },
+                    onShareLog = { file -> shareLogFile(context, file) },
                 )
             }
 
@@ -257,6 +259,30 @@ private val IMPLEMENTED_DESTINATIONS = setOf(
     PdtDestination.AUTOMATION,
     PdtDestination.SETTINGS,
 )
+
+/**
+ * ログファイルを他アプリへ渡す。
+ *
+ * アプリ専用ディレクトリのファイルはそのままでは共有できないため、FileProvider 経由で
+ * 一時的な読み取り権限を付けて渡す。**送信先は利用者が選ぶ。** アプリからは自動送信しない。
+ */
+private fun shareLogFile(context: android.content.Context, file: java.io.File) {
+    if (!file.exists()) return
+    val uri = androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file,
+    )
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+        putExtra(android.content.Intent.EXTRA_SUBJECT, file.name)
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    // 送信先を選ぶ画面を必ず出す。既定のアプリへ黙って送らない。
+    val chooser = android.content.Intent.createChooser(intent, file.name)
+    runCatching { context.startActivity(chooser) }
+}
 
 /**
  * 上部バー。

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  共有を許可する範囲。
+  アプリ専用ディレクトリのうち、ログと書き出したファイルだけを対象にする。
+  filesDir 全体を公開すると、意図しないファイルまで共有できてしまう。
+-->
+<paths>
+    <files-path name="session_logs" path="logs/" />
+    <files-path name="waveform_exports" path="waveforms/" />
+    <files-path name="instrument_downloads" path="downloads/" />
+</paths>

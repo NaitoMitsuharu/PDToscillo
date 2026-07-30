@@ -18,6 +18,7 @@ import com.pdtoscillo.core.network.DiscoveredDevice
 import com.pdtoscillo.core.network.DiscoveryProgress
 import com.pdtoscillo.core.network.InstrumentSession
 import com.pdtoscillo.core.network.NetworkStatus
+import com.pdtoscillo.core.network.SessionLogState
 import com.pdtoscillo.core.scpi.ScpiException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +53,7 @@ data class ConnectionUiState(
     val discoveredDevices: List<DiscoveredDevice> = emptyList(),
     val savedDevices: List<SavedDeviceUi> = emptyList(),
     val wizardVisible: Boolean = false,
+    val logState: SessionLogState = SessionLogState(),
 ) {
     val portError: Boolean get() = portInput.toIntOrNull()?.let { it !in 1..MAX_PORT } ?: portInput.isNotEmpty()
     val hostError: Boolean get() = hostInput.isNotBlank() && !looksLikeHostOrIp(hostInput)
@@ -112,6 +114,10 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
                 readOnlyMode = readOnly,
                 error = (state as? ConnectionState.Failed)?.error ?: _uiState.value.error,
             )
+        }.launchIn(viewModelScope)
+
+        session.sessionLogger.state.onEach { logState ->
+            _uiState.value = _uiState.value.copy(logState = logState)
         }.launchIn(viewModelScope)
 
         session.client.pendingCount.onEach { pending ->
@@ -195,11 +201,42 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
         val config = currentConfig()
         session.rememberConfig(config)
         launchBusy("接続中") {
+            session.sessionLogger.section("接続を開始: ${config.host}:${config.port}")
             session.client.connect(config)
-            session.client.identify()
-            session.client.detectCapabilities()
+
+            // 経路の検証結果を残す。モバイル回線へ出ていた場合、
+            // ここを見れば後から分かる。
+            session.client.routeInfo.value?.let { route ->
+                session.sessionLogger.note(
+                    "経路: local=${route.localAddress} -> remote=${route.remoteAddress}:${route.remotePort} " +
+                        "bindStrategy=${route.requestedBindStrategy} Ethernet経由=${route.boundToEthernet}",
+                )
+                route.warning?.let { session.sessionLogger.note("経路の警告: $it") }
+            }
+
+            val identity = session.client.identify()
+            // *IDN? の生応答は機種の特定に直結する。必ず残す。
+            session.sessionLogger.note("*IDN? の生応答: ${identity.raw}")
+
+            val capabilities = session.client.detectCapabilities { progress ->
+                session.sessionLogger.note("機能検出: ${progress.step} ${progress.detail ?: ""}")
+            }
+            session.sessionLogger.note(
+                "検出結果: 世代=${capabilities.family} アナログ=${capabilities.analogChannelCount}ch " +
+                    "デジタル=${capabilities.digitalChannelCount}ch 検出方法=${capabilities.detectionSource} " +
+                    "不明=${capabilities.undeterminedFeatures.joinToString().ifEmpty { "なし" }}",
+            )
             addSavedDevice(config)
         }
+    }
+
+    /** ログの記録を開始する。接続前に押しておくと、接続のやり取りが最初から残る。 */
+    fun startLogging() {
+        session.sessionLogger.start(currentConfig())
+    }
+
+    fun stopLogging() {
+        session.sessionLogger.stop()
     }
 
     fun disconnect() {
@@ -216,6 +253,7 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
         session.rememberConfig(config)
         _uiState.value = _uiState.value.copy(diagnosticSteps = emptyList(), diagnosticReport = null)
         launchBusy("診断中") {
+            session.sessionLogger.section("接続診断を開始: ${config.host}:${config.port}")
             val report = session.diagnostics.run(config) { step ->
                 _uiState.value = _uiState.value.copy(diagnosticSteps = _uiState.value.diagnosticSteps + step)
             }
@@ -223,6 +261,15 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
                 diagnosticReport = report,
                 error = report.lastError,
                 errorRemedy = report.lastError?.let { ConnectionDiagnostics.remedyFor(it, config) },
+            )
+
+            // 診断結果は SCPI 通信ではないため、明示的にログへ書く。
+            session.sessionLogger.section("接続診断の結果")
+            session.sessionLogger.block(
+                report.steps.joinToString(separator = "\n") { step ->
+                    "  [${step.status}] ${step.id}: ${step.detail ?: ""}" +
+                        (step.remedy?.let { "\n      対処: $it" } ?: "")
+                },
             )
         }
     }

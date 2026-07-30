@@ -31,6 +31,21 @@
             </intent-filter>
         </activity>
 
+        <!--
+          ログや書き出したファイルを他アプリへ渡すための FileProvider。
+          アプリ専用ディレクトリのファイルは通常そのままでは共有できない。
+          公開範囲は file_paths.xml で logs / waveforms / downloads に限定している。
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- AppCompat の言語設定を端末へ保存する（API 33 未満向けバックポート）。 -->
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

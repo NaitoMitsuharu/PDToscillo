@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pdtoscillo.core.common.EngineeringUnits
 import com.pdtoscillo.core.model.ConnectionState
 import com.pdtoscillo.core.model.LineTerminator
 import com.pdtoscillo.core.model.SocketBindStrategy
@@ -54,7 +55,12 @@ const val CONNECTION_LIST_TAG = "connectionScreenList"
  * 最初にここへ来る。IP とポートを入れて接続し、うまくいかないときは診断で切り分ける。
  */
 @Composable
-fun ConnectionScreen(viewModel: ConnectionViewModel, onOpenEscope: (String) -> Unit, modifier: Modifier = Modifier) {
+fun ConnectionScreen(
+    viewModel: ConnectionViewModel,
+    onOpenEscope: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onShareLog: (java.io.File) -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     if (state.wizardVisible) {
@@ -237,6 +243,8 @@ fun ConnectionScreen(viewModel: ConnectionViewModel, onOpenEscope: (String) -> U
             }
         }
 
+        item { SessionLogSection(state, viewModel, onShareLog) }
+
         item { EthernetInfoSection(state) }
 
         if (state.diagnosticSteps.isNotEmpty()) {
@@ -313,6 +321,76 @@ private fun ConnectionStatusHeader(state: ConnectionState, readOnlyMode: Boolean
                 )
             }
             Switch(checked = readOnlyMode, onCheckedChange = onReadOnlyChange)
+        }
+    }
+}
+
+/**
+ * セッションログの記録。
+ *
+ * 実機で最初に接続するときは、何が起きたかを後から追えることが重要になる。
+ * 接続の前に記録を開始しておくと、接続のやり取りが最初から残る。
+ */
+@Composable
+private fun SessionLogSection(state: ConnectionUiState, viewModel: ConnectionViewModel, onShareLog: (java.io.File) -> Unit) {
+    val log = state.logState
+    SectionCard(
+        title = "セッションログ",
+        trailing = {
+            StatusChip(
+                text = if (log.recording) "記録中" else "停止中",
+                color = if (log.recording) Color(0xFFFF8A80) else Color(0xFFB0BEC5),
+            )
+        },
+    ) {
+        Text(
+            text = "送受信した SCPI コマンドと応答、ネットワークの状態、診断結果を" +
+                "端末内のファイルへ残します。実機へ最初に接続するときは、" +
+                "**接続する前に**記録を開始してください。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        val fileName = log.fileName
+        if (fileName != null) {
+            Spacer(Modifier.height(8.dp))
+            LabeledValue("ファイル", fileName)
+            LabeledValue("サイズ", EngineeringUnits.formatBytes(log.sizeBytes))
+            LabeledValue("記録した通信", log.entryCount.toString())
+            if (log.truncated) {
+                Spacer(Modifier.height(8.dp))
+                UnavailableNotice("ログが上限に達したため記録を停止しました。")
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = viewModel::startLogging,
+                enabled = !log.recording,
+                modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
+            ) { Text("記録開始") }
+            OutlinedButton(
+                onClick = viewModel::stopLogging,
+                enabled = log.recording,
+                modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
+            ) { Text("停止") }
+        }
+
+        // 記録中でも取り出せる。長時間の記録の途中経過を確認したい場合に使う。
+        val filePath = log.filePath
+        if (filePath != null) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { onShareLog(java.io.File(filePath)) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
+            ) { Text("ログを送る / 保存する") }
+            Text(
+                text = "保存先: $filePath",
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
