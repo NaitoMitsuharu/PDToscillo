@@ -239,6 +239,43 @@ class OscilloscopeViewModel(private val session: InstrumentSession) : ViewModel(
         session.driver.applyTriggerLevel(channel, volts)
     }
 
+    fun setTriggerSource(source: com.pdtoscillo.core.model.WaveformSource) = applyAndReport("トリガソース") {
+        session.driver.applyTriggerSource(source)
+    }
+
+    fun setTriggerCoupling(coupling: com.pdtoscillo.core.model.TriggerCoupling) = applyAndReport("トリガカップリング") {
+        session.driver.applyTriggerCoupling(coupling)
+    }
+
+    fun setTriggerHoldoff(seconds: Double) = applyAndReport("ホールドオフ") {
+        session.driver.applyTriggerHoldoff(seconds)
+    }
+
+    /**
+     * トリガ種別を変更する。
+     *
+     * 種別を変えると、それまでの詳細設定は種別ごとの既定値に置き換わる。
+     * 元に戻すのが手間なので、切り替え前に現在の設定を控えておく。
+     */
+    fun requestTriggerType(type: com.pdtoscillo.core.model.TriggerType) {
+        val previous = _uiState.value.snapshot.trigger.type
+        if (previous == type) return
+        launchBusy("トリガ種別") {
+            when (val result = session.driver.applyTriggerType(type)) {
+                is ScpiClient.ApplyResult.Applied -> _uiState.value = _uiState.value.copy(
+                    notice = "トリガ種別を ${result.accepted?.displayName ?: type.displayName} に変更しました" +
+                        (previous?.let { "（変更前: ${it.displayName}）" } ?: ""),
+                )
+
+                is ScpiClient.ApplyResult.Rejected -> _uiState.value = _uiState.value.copy(
+                    error = result.error,
+                    errorRemedy = ConnectionDiagnostics.remedyFor(result.error, session.lastConfig.value),
+                )
+            }
+            loadSnapshot()
+        }
+    }
+
     fun channel(number: Int): ChannelSettings? = _uiState.value.snapshot.channels.firstOrNull { it.channel == number }
 
     fun setReadOnlyMode(enabled: Boolean) = session.client.setReadOnlyMode(enabled)

@@ -7,6 +7,7 @@
     <string name="nav_overview">概要</string>
     <string name="nav_waveform">波形</string>
     <string name="nav_channels">チャンネル</string>
+    <string name="nav_trigger">トリガ</string>
     <string name="nav_measurement">測定</string>
     <string name="nav_automation">自動測定</string>
     <string name="nav_files">ファイル</string>

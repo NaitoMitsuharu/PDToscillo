@@ -59,6 +59,15 @@ class SimulatedInstrument(private val config: SimulatorConfig) {
         settings["DATA:ENCDG"] = "RIBINARY"
         settings["DATA:WIDTH"] = "1"
         settings["ACQUIRE:FASTACQ:STATE"] = "0"
+        settings["MEASUREMENT:STATISTICS:MODE"] = "OFF"
+        settings["MEASUREMENT:IMMED:TYPE"] = "FREQUENCY"
+        settings["MEASUREMENT:IMMED:SOURCE1"] = "CH1"
+        for (slot in 1..MEASUREMENT_SLOTS) {
+            settings["MEASUREMENT:MEAS$slot:TYPE"] = "FREQUENCY"
+            settings["MEASUREMENT:MEAS$slot:SOURCE1"] = "CH1"
+            settings["MEASUREMENT:MEAS$slot:SOURCE2"] = "CH2"
+            settings["MEASUREMENT:MEAS$slot:STATE"] = "0"
+        }
         settings["TRIGGER:A:TYPE"] = "EDGE"
         settings["TRIGGER:A:MODE"] = "AUTO"
         settings["TRIGGER:A:PULSE:CLASS"] = "WIDTH"
@@ -508,6 +517,9 @@ class SimulatedInstrument(private val config: SimulatorConfig) {
 
         /** 波形が非表示のときに返る転送パラメータの数 (BYT_NR, BIT_NR, ENCDG, BN_FMT, BYT_OR)。 */
         private const val TRANSMISSION_FIELD_COUNT = 5
+
+        /** 同時測定数。CONFIGuration:NUMMEAS? の応答と一致させる。 */
+        private const val MEASUREMENT_SLOTS = 4
         private const val DEFAULT_HORIZONTAL_SCALE = 4.0e-6
         private const val DEFAULT_VERTICAL_SCALE = 0.1
         private const val BAD_LENGTH_DELTA = 128L

@@ -6,6 +6,7 @@
     <string name="nav_overview">Overview</string>
     <string name="nav_waveform">Waveform</string>
     <string name="nav_channels">Channels</string>
+    <string name="nav_trigger">Trigger</string>
     <string name="nav_measurement">Measure</string>
     <string name="nav_automation">Automation</string>
     <string name="nav_files">Files</string>

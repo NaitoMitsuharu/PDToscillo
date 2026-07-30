@@ -32,9 +32,12 @@ import com.pdtoscillo.core.ui.component.UnavailableNotice
 import com.pdtoscillo.feature.connection.ConnectionScreen
 import com.pdtoscillo.feature.connection.ConnectionViewModel
 import com.pdtoscillo.feature.connection.EscopeScreen
+import com.pdtoscillo.feature.measurement.MeasurementScreen
+import com.pdtoscillo.feature.measurement.MeasurementViewModel
 import com.pdtoscillo.feature.oscilloscope.ChannelsScreen
 import com.pdtoscillo.feature.oscilloscope.OscilloscopeViewModel
 import com.pdtoscillo.feature.oscilloscope.OverviewScreen
+import com.pdtoscillo.feature.oscilloscope.TriggerScreen
 import com.pdtoscillo.feature.waveform.WaveformScreen
 import com.pdtoscillo.feature.waveform.WaveformViewModel
 import com.pdtoscillo.navigation.ESCOPE_ROUTE
@@ -134,7 +137,23 @@ fun PdtApp(session: InstrumentSession) {
                 }
             }
 
-            // Phase 4 以降で実装する画面。未実装であることを画面上で明示する。
+            composable(PdtDestination.TRIGGER.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    TriggerScreen(viewModel = viewModel(factory = OscilloscopeViewModel.factory(session)))
+                }
+            }
+
+            composable(PdtDestination.MEASUREMENT.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    MeasurementScreen(viewModel = viewModel(factory = MeasurementViewModel.factory(session)))
+                }
+            }
+
+            // Phase 5 以降で実装する画面。未実装であることを画面上で明示する。
             PdtDestination.entries
                 .filter { it !in IMPLEMENTED_DESTINATIONS }
                 .forEach { destination ->
@@ -156,6 +175,8 @@ private val IMPLEMENTED_DESTINATIONS = setOf(
     PdtDestination.OVERVIEW,
     PdtDestination.CHANNELS,
     PdtDestination.WAVEFORM,
+    PdtDestination.TRIGGER,
+    PdtDestination.MEASUREMENT,
 )
 
 @Composable

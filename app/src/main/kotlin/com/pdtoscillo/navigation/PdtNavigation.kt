@@ -2,6 +2,7 @@ package com.pdtoscillo.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PlayCircle
@@ -23,6 +24,7 @@ enum class PdtDestination(val route: String, val labelRes: Int, val icon: ImageV
     OVERVIEW("overview", R.string.nav_overview, Icons.Filled.Speed, requiresConnection = true),
     WAVEFORM("waveform", R.string.nav_waveform, Icons.AutoMirrored.Filled.ShowChart, requiresConnection = true),
     CHANNELS("channels", R.string.nav_channels, Icons.Filled.Tune, requiresConnection = true),
+    TRIGGER("trigger", R.string.nav_trigger, Icons.Filled.Bolt, requiresConnection = true),
     MEASUREMENT("measurement", R.string.nav_measurement, Icons.Filled.Speed, requiresConnection = true),
     AUTOMATION("automation", R.string.nav_automation, Icons.Filled.PlayCircle, requiresConnection = true),
     FILES("files", R.string.nav_files, Icons.Filled.Folder, requiresConnection = true),
