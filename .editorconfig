@@ -10,10 +10,17 @@ trim_trailing_whitespace = true
 
 [*.{kt,kts}]
 max_line_length = 140
+
+# ktlint_official は multiline-expression-wrapping や function-signature を強制し、
+# Compose の記述（末尾ラムダ、修飾子チェーン）と噛み合わない。
+# 未使用 import やインデントなど実害のある指摘は intellij_idea でも検出される。
+ktlint_code_style = intellij_idea
+
+# テスト関数名にバッククォート付きの日本語を使うため無効化する。
 ktlint_standard_function-naming = disabled
 ktlint_standard_property-naming = disabled
 ktlint_standard_class-naming = disabled
-ktlint_function_signature_body_expression_wrapping = default
+
 ij_kotlin_allow_trailing_comma = true
 ij_kotlin_allow_trailing_comma_on_call_site = true
 
