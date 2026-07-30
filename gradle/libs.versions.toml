@@ -1,7 +1,10 @@
 [versions]
 # --- Build tooling (Spright と同一世代に合わせる) ---
 agp = "8.10.1"
-kotlin = "2.4.0"
+# Room 2.8.4 が同梱する kotlin-metadata-jvm は Kotlin 2.3 までのメタデータしか読めない。
+# Kotlin 2.4 でビルドすると Room の注釈処理が "Provided Metadata instance has version 2.4.0" で失敗する。
+# Room はローカル保存の要件なので、Kotlin 側を Room が対応する世代へ合わせる。
+kotlin = "2.3.21"
 ktlintPlugin = "12.3.0"
 ktlintTool = "1.5.0"
 

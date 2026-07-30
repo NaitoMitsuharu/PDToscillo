@@ -29,6 +29,8 @@ import com.pdtoscillo.R
 import com.pdtoscillo.core.database.export.WaveformExporter
 import com.pdtoscillo.core.network.InstrumentSession
 import com.pdtoscillo.core.ui.component.UnavailableNotice
+import com.pdtoscillo.feature.automation.AutomationScreen
+import com.pdtoscillo.feature.automation.AutomationViewModel
 import com.pdtoscillo.feature.connection.ConnectionScreen
 import com.pdtoscillo.feature.connection.ConnectionViewModel
 import com.pdtoscillo.feature.connection.EscopeScreen
@@ -44,6 +46,7 @@ import com.pdtoscillo.feature.oscilloscope.OptionsViewModel
 import com.pdtoscillo.feature.oscilloscope.OscilloscopeViewModel
 import com.pdtoscillo.feature.oscilloscope.OverviewScreen
 import com.pdtoscillo.feature.oscilloscope.TriggerScreen
+import com.pdtoscillo.feature.settings.SettingsScreen
 import com.pdtoscillo.feature.waveform.WaveformScreen
 import com.pdtoscillo.feature.waveform.WaveformViewModel
 import com.pdtoscillo.navigation.ESCOPE_ROUTE
@@ -186,7 +189,23 @@ fun PdtApp(session: InstrumentSession) {
                 }
             }
 
-            // Phase 6 で実装する画面。未実装であることを画面上で明示する。
+            composable(PdtDestination.AUTOMATION.route) {
+                if (!connectionState.isConnected) {
+                    RequiresConnection()
+                } else {
+                    val context = LocalContext.current
+                    val exporter = remember(context) { WaveformExporter(context.applicationContext) }
+                    AutomationScreen(
+                        viewModel = viewModel(factory = AutomationViewModel.factory(session, exporter)),
+                    )
+                }
+            }
+
+            composable(PdtDestination.SETTINGS.route) {
+                SettingsScreen(session = session)
+            }
+
+            // すべての画面を実装済み。念のため残す分岐（到達しない）。
             PdtDestination.entries
                 .filter { it !in IMPLEMENTED_DESTINATIONS }
                 .forEach { destination ->
@@ -213,6 +232,8 @@ private val IMPLEMENTED_DESTINATIONS = setOf(
     PdtDestination.OPTIONS,
     PdtDestination.CONSOLE,
     PdtDestination.FILES,
+    PdtDestination.AUTOMATION,
+    PdtDestination.SETTINGS,
 )
 
 @Composable
