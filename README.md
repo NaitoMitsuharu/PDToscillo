@@ -319,27 +319,78 @@ AFG の**出力を有効にする操作では確認ダイアログ**が出ます
 - Android SDK Platform 36 / minSdk 30
 - Sony PDT-FP1 または Android 11 以降の Android 端末
 
-## ビルド
+## 別の PC で clone してビルドする
+
+計測は現場の PC と端末で行い、開発は別の PC で続ける、という進め方を想定しています。
+リポジトリは自己完結しており、clone すればそのままビルドできます
+（Gradle Wrapper を含むため Gradle の事前インストールは不要です）。
+
+```bash
+git clone git@github.com:NaitoMitsuharu/PDToscillo.git
+cd PDToscillo
+```
+
+### Android SDK の場所を教える
+
+**clone 直後は `local.properties` がありません**（環境ごとに異なるため git 管理から外しています）。
+Android Studio でプロジェクトを開けば自動生成されますが、コマンドラインでビルドする場合は
+どちらかの方法で SDK の場所を指定してください。指定しないと
+`SDK location not found` で失敗します。
+
+`local.properties` を作る場合:
+
+```bash
+echo "sdk.dir=C\\:\\\\Users\\\\<ユーザー名>\\\\AppData\\\\Local\\\\Android\\\\Sdk" > local.properties
+```
+
+環境変数で指定する場合:
+
+```bash
+ANDROID_HOME="C:\Users\<ユーザー名>\AppData\Local\Android\Sdk" ./gradlew assembleDebug
+```
+
+macOS / Linux では `~/Library/Android/sdk` や `~/Android/Sdk` になります。
+
+### ビルドとインストール
 
 ```bash
 ./gradlew assembleDebug
+./gradlew installDebug
 ```
 
-`java` が PATH に無い環境では JDK を明示します。
+`java` が PATH に無い環境では JDK を明示します（Android Studio 同梱の JBR で可）。
 
 ```bash
 JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
 ```
 
-## PDT-FP1 へのインストール
+APK を直接持ち運ぶ場合は `app/build/outputs/apk/debug/app-debug.apk` を渡してインストールします。
 
-USB で接続し、開発者オプションの USB デバッグを有効にしてから実行します。
+### 現場で計測し、別の PC で続きを行う流れ
+
+1. **開発 PC**: 変更を commit して push する
+2. **現場の PC**: `git pull`（初回は clone）してビルドし、`installDebug` で端末へ入れる
+3. **現場**: 端末とオシロスコープを LAN ケーブルで直結する
+4. **端末**: アプリの接続画面で「セッションログ」→「**記録開始**」を押してから接続する
+5. **端末**: 接続、`*IDN?`、接続診断、波形取得などを実行する
+6. **端末**: 「停止」を押す（記録中はログが増え続けます）
+7. **開発 PC**: 端末を USB で繋ぎ、下記でログを取り出す
+8. **開発 PC**: `*IDN?` の応答を [docs/hardware-validation.md](docs/hardware-validation.md) へ記録し、
+   [docs/compatibility-matrix.md](docs/compatibility-matrix.md) の該当列を確定値へ更新する
+
+端末からログをまとめて取り出すコマンド:
 
 ```bash
-./gradlew installDebug
+adb exec-out run-as com.pdtoscillo tar c files/logs | tar xv
 ```
 
-APK を直接渡す場合は `app/build/outputs/apk/debug/app-debug.apk` を転送してインストールします。
+> `adb` でログを取り出せるのは `debug` ビルドのみです（`run-as` はデバッグ可能なアプリだけが対象）。
+> リリースビルドを配布した場合は、アプリの「ログを送る / 保存する」から取り出してください。
+
+## PDT-FP1 へのインストール
+
+USB で接続し、開発者オプションの USB デバッグを有効にしてから `./gradlew installDebug` を実行します。
+手順の詳細は「別の PC で clone してビルドする」を参照してください。
 
 ## LAN 直結の手順
 
