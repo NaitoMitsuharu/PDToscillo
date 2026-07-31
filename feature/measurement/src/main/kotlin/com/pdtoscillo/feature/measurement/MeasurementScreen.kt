@@ -235,7 +235,7 @@ private fun MeasurementCard(slot: MeasurementSlot, state: MeasurementUiState, vi
                     val unit = slot.unit ?: slot.type?.quantity?.defaultUnit ?: ""
                     val formatted = formatMeasValue(slot.statistics.current, unit)
                     // 現在値を大きく表示
-                    Row(verticalAlignment = Alignment.Baseline, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = formatted.first,
                             fontSize = 40.sp,
