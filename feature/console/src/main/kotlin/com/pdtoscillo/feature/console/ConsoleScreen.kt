@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pdtoscillo.core.scpi.TektronixCommands
 import com.pdtoscillo.core.ui.component.ErrorCard
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.component.StatusChip
@@ -233,15 +234,17 @@ private fun ConsoleEntryRow(entry: ConsoleEntry) {
 
 @Composable
 private fun QuickCommandRow(viewModel: ConsoleViewModel) {
+    // コマンド文字列は必ず TektronixCommands（マニュアル検証済み）から取る。
+    // ここへ直接書くと未検証コマンドが紛れ込む。
     val quickCommands = listOf(
-        "*IDN?" to "*IDN?",
-        "Run" to "ACQuire:STATE RUN",
-        "Stop" to "ACQuire:STATE STOP",
-        "CH1 ON" to "CH1:DISplay ON",
-        "CH2 ON" to "CH2:DISplay ON",
-        "Autoset" to "AUTOSet EXECute",
-        "エラー?" to "SYSTem:ERRor?",
-        "*CLS" to "*CLS",
+        "*IDN?" to TektronixCommands.Common.IDENTIFY,
+        "Run" to TektronixCommands.Acquisition.run(),
+        "Stop" to TektronixCommands.Acquisition.stop(),
+        "CH1 ON" to "${TektronixCommands.Vertical.display(1)} ON",
+        "CH2 ON" to "${TektronixCommands.Vertical.display(2)} ON",
+        "Autoset" to TektronixCommands.Autoset.execute(),
+        "イベント?" to TektronixCommands.Common.ALL_EVENTS,
+        "*CLS" to TektronixCommands.Common.CLEAR_STATUS,
     )
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),

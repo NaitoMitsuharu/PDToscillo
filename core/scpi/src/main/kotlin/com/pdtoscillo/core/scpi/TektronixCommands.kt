@@ -90,6 +90,19 @@ object TektronixCommands {
         fun continuous(): List<String> = listOf("$STOP_AFTER RUNSTop", "$STATE RUN")
     }
 
+    /**
+     * Autoset。マニュアル記載の構文は `AUTOSet {EXECute|UNDo}`。
+     *
+     * 本体の設定を大きく変えるため [ScpiDangerClassifier] で危険操作として扱う。
+     */
+    object Autoset {
+        const val AUTOSET = "AUTOSet"
+
+        fun execute(): String = "$AUTOSET EXECute"
+
+        fun undo(): String = "$AUTOSET UNDo"
+    }
+
     /** Horizontal グループ。 */
     object Horizontal {
         const val SCALE = "HORizontal:SCAle"

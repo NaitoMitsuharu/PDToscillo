@@ -230,8 +230,11 @@ private fun StatusBanner(state: ConnectionUiState, viewModel: ConnectionViewMode
                         Text(
                             text = if (state.readOnlyMode) "読み取り専用" else "設定変更可",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (state.readOnlyMode) MaterialTheme.colorScheme.onSurfaceVariant
-                            else Color(0xFFFFD180),
+                            color = if (state.readOnlyMode) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                Color(0xFFFFD180)
+                            },
                         )
                         Switch(
                             checked = !state.readOnlyMode,

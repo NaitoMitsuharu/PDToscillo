@@ -220,9 +220,9 @@ private fun ControlPanel(state: WaveformUiState, viewModel: WaveformViewModel, m
             }
 
             // 更新レートと転送情報
-            val rateHz = if (state.lastCaptureMillis != null && state.lastCaptureMillis > 0) {
-                1000.0 / (state.lastCaptureMillis + state.intervalMillis)
-            } else null
+            val rateHz = state.lastCaptureMillis
+                ?.takeIf { it > 0 }
+                ?.let { 1000.0 / (it + state.intervalMillis) }
             if (rateHz != null) {
                 Text(
                     text = "更新: ${"%.1f".format(rateHz)} Hz  取得: ${state.lastCaptureMillis} ms",
