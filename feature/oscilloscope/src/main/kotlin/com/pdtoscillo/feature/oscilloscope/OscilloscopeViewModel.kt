@@ -139,7 +139,7 @@ class OscilloscopeViewModel(private val session: InstrumentSession) : ViewModel(
     }
 
     fun refresh() {
-        launchBusy("取得中") { loadSnapshot() }
+        launchBusy("アクイジション / タイムベース / トリガ / チャンネル設定を読み込み中") { loadSnapshot() }
     }
 
     private suspend fun loadSnapshot() {

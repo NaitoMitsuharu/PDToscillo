@@ -127,7 +127,11 @@ fun ConsoleScreen(viewModel: ConsoleViewModel, modifier: Modifier = Modifier) {
                 .fillMaxWidth(),
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
+        // よく使うコマンドのクイックボタン
+        QuickCommandRow(viewModel)
+
+        Spacer(Modifier.height(4.dp))
         FavoritesRow(state, viewModel)
 
         if (showScript) {
@@ -222,6 +226,31 @@ private fun ConsoleEntryRow(entry: ConsoleEntry) {
                 fontFamily = FontFamily.Monospace,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickCommandRow(viewModel: ConsoleViewModel) {
+    val quickCommands = listOf(
+        "*IDN?" to "*IDN?",
+        "Run" to "ACQuire:STATE RUN",
+        "Stop" to "ACQuire:STATE STOP",
+        "CH1 ON" to "CH1:DISplay ON",
+        "CH2 ON" to "CH2:DISplay ON",
+        "Autoset" to "AUTOSet EXECute",
+        "エラー?" to "SYSTem:ERRor?",
+        "*CLS" to "*CLS",
+    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+    ) {
+        quickCommands.forEach { (label, command) ->
+            AssistChip(
+                onClick = { viewModel.useFavorite(command) },
+                label = { Text(label, fontFamily = FontFamily.Monospace) },
             )
         }
     }

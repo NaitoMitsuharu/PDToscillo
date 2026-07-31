@@ -3,25 +3,145 @@
 自動テスト（疑似オシロスコープ相手）で検証できた項目と、実機でしか確認できない項目を分離して記録します。
 **推測による成功報告はしません。** 実機未確認の項目はここに残り続けます。
 
-## 実機接続時の記録欄
+---
 
-実機へ最初に接続したら、以下を記録してください。この情報でモデルと世代が確定し、
-コマンド対応表を正確に絞り込めます。
+## 確認済み実機: Tektronix DPO4034
+
+接続日: 2026-07-31
+
+### 機器情報
+
+```text
+モデル   : DPO4034
+世代     : Gen 1（無印、B/C サフィックスなし）
+ファームウェア: v2.48（DPO4000 シリーズの最終リリース付近）
+アナログ CH: 4ch（モデル名末尾「4」より確定）
+デジタル CH: なし（DPO プレフィックスより確定）
+帯域     : 350 MHz（モデル名「034」→ 帯域コード「03」= 350 MHz）
+
+*IDN? の応答: 未取得（接続は成功したがログ取得前に切断）
+→ 次回接続時にセッションログを先に開始して記録すること
+```
+
+### ネットワーク接続
+
+```text
+構成     : PC(USB) ─ PDT-FP1(LAN) ─ DPO4034
+LAN ドライバ: Realtek r8168（adb shell ifconfig eth0 で確認）
+Android 側 I/F: eth0（UP, BROADCAST, RUNNING, MULTICAST）
+
+Android の挙動（重要）:
+  eth0 は ConnectivityManager に TRANSPORT_ETHERNET として登録されず、
+  代わりに「テザリング用インターフェース（Tethering interface mode: 1）」
+  として管理される。Settings の「イーサネット」項目が表示されない。
+
+設定手順:
+  1. PDT-FP1: 設定 → ネットワーク → ホットスポットとテザリング
+     → イーサネットテザリング ON
+  2. DPO4034: Utility → I/O → Ethernet Network Settings → DHCP/BOOTP → ON
+  3. DPO4034 の IP を Change Instrument Settings → Instrument IP Address で確認
+
+実際に割り当てられた IP:
+  PDT-FP1 (eth0)  : 10.175.225.170 / 24
+  DPO4034         : 10.175.225.142 / 24（DHCP 払い出し）
+
+疎通確認（adb shell ping）:
+  ping -c 4 10.175.225.142 → 0% packet loss, avg 0.5 ms
+
+ポート確認（adb shell nc -z）:
+  nc -z -w 3 10.175.225.142 4000 → exit:0（ポート開放を確認）
+```
+
+### Socket Server（DPO4034 Gen 1 固有の挙動）
+
+```text
+UI メニュー: 存在しない
+  Utility → I/O → Ethernet Network Settings に表示されるのは
+    - Change Instrument Settings
+    - DHCP/BOOTP
+    - Test Connection
+  のみ。e*Scope、Socket Server のトグルは一切ない。
+
+挙動: Socket Server はファームウェア内で常時有効（always-on）
+  メニューで ON/OFF する必要がなく、DPO4034 に IP が割り当てられれば
+  ポート 4000 は自動的に開いている。
+
+Protocol: None（Terminal モードではない）
+Port    : 4000
+接続確認: TCP 接続成功、SCPI 応答あり（接続後 4 通信を記録）
+```
+
+### アプリ側の必須設定
+
+```text
+バインド方式: システム既定（SYSTEM_DEFAULT）
+  テザリングモードでは ConnectivityManager が eth0 を認識しないため、
+  ETHERNET_SOCKET_FACTORY / ETHERNET_BIND_SOCKET は両方失敗する。
+  SYSTEM_DEFAULT を使うと OS のルーティングテーブルが
+  10.175.225.x を eth0 経由で自動転送するため接続できる。
+
+IP   : 10.175.225.142（DHCP なので再起動時に変わる可能性あり）
+Port : 4000
+Terminator: LF
+Protocol  : Raw Socket（VXI-11 は未実装）
+```
+
+### 波形データフォーマット（コードと仕様書から）
+
+```text
+転送プロトコル: SCPI テキスト over TCP port 4000
+レスポンス終端: LF (\n)
+
+波形取得シーケンス:
+  1. DATa:SOUrce CH1       ← 対象チャンネル指定
+  2. DATa:ENCdg RIBinary   ← バイナリエンコード（読み取り専用時はスキップ）
+  3. DATa:WIDth 1          ← 1 バイト / 点（または 2 バイト）
+  4. WFMOutpre?            ← スケール情報取得
+  5. CURVe?                ← 波形データ取得
+
+WFMOutpre の主要フィールド（CSV 形式で返却）:
+  BYT_NR  : バイト/点（1 or 2）
+  NR_PT   : 点数（デフォルト: 10000）
+  XINCR   : 時間分解能 [s/点]
+  XZERO   : 先頭点の時刻
+  YMULT   : 電圧換算係数 [V/count]
+  YOFF    : ゼロオフセット [count]
+  YZERO   : 電圧オフセット [V]
+
+電圧換算式:
+  voltage[V] = (raw_count - YOFF) × YMULT + YZERO
+
+CURVe? レスポンス形式（IEEE 488.2 バイナリブロック）:
+  # <N> <NNNN...> <data bytes>
+  例: #510000 + 10000 bytes（10000点 × 1バイト）
+      #520000 + 20000 bytes（10000点 × 2バイト）
+
+更新レート（実測値なし、以下は推定）:
+  LAN RTT       : ~0.5 ms
+  10000点×1バイト: 10KB + SCPI オーバーヘッド → 推定 10〜30 ms
+  アプリ最小間隔 : 200 ms（設定可能: 200/500/1000/2000/5000 ms）
+  実用的な更新率: 単チャンネル・デフォルト記録長で 2〜5 Hz 程度
+  → 正確な値は次回接続時にアプリのスループット表示で確認
+```
+
+---
+
+## 実機接続時の記録欄（次回接続用）
 
 ```text
 *IDN? の応答:
 （ここへ貼り付け）
 
-例: TEKTRONIX,MDO4104C,C012345,CF:91.1CT FV:v1.28
+例: TEKTRONIX,DPO4034,C012345,CF:91.1CT FV:v2.48
     → メーカー / モデル / シリアル / ファームウェア
 ```
 
 記録後、[compatibility-matrix.md](compatibility-matrix.md) の該当列を `?` から確定値へ更新します。
 
-**接続する前にアプリのセッションログを開始してください。** 接続画面の「セッションログ」→
-「記録開始」を押すと、送受信した SCPI とネットワークの状態がすべて端末内のファイルへ残ります。
-繋がらなかった場合も、どこで止まったかがログから分かります。
-取り出し方は README の「ログを記録する」を参照してください。
+**接続する前にアプリの「詳細設定」→「セッションログ」→「記録開始」を押してください。**
+送受信した SCPI とネットワークの状態がすべて端末内のファイルへ残ります。
+
+---
 
 ---
 

@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -206,12 +207,40 @@ private fun ControlPanel(state: WaveformUiState, viewModel: WaveformViewModel, m
             }
         }
 
-        SectionCard(title = "取得設定") {
+        SectionCard(title = "取得") {
+            // 連続取得トグル + インジケーター
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("連続取得", modifier = Modifier.weight(1f))
+                Text(
+                    text = if (state.continuous) "● 連続取得中" else "連続取得",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (state.continuous) Color(0xFF69F0AE) else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
                 Switch(checked = state.continuous, onCheckedChange = viewModel::setContinuous)
             }
-            Text("取得周期", style = MaterialTheme.typography.labelLarge)
+
+            // 更新レートと転送情報
+            val rateHz = if (state.lastCaptureMillis != null && state.lastCaptureMillis > 0) {
+                1000.0 / (state.lastCaptureMillis + state.intervalMillis)
+            } else null
+            if (rateHz != null) {
+                Text(
+                    text = "更新: ${"%.1f".format(rateHz)} Hz  取得: ${state.lastCaptureMillis} ms",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            state.throughputBytesPerSecond?.let {
+                Text(
+                    text = "スループット: ${EngineeringUnits.formatBytes(it.toLong())}/s  " +
+                        (state.visibleTraces.firstOrNull()?.waveform?.pointCount?.let { pts -> "$pts 点" } ?: ""),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Text("取得周期（最短）", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 WaveformUiState.INTERVALS.forEach { interval ->
                     FilterChip(
@@ -222,7 +251,7 @@ private fun ControlPanel(state: WaveformUiState, viewModel: WaveformViewModel, m
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Text("データ幅", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(1, 2).forEach { bytes ->
@@ -236,18 +265,10 @@ private fun ControlPanel(state: WaveformUiState, viewModel: WaveformViewModel, m
             }
             if (state.readOnlyMode) {
                 Text(
-                    text = "読み取り専用モードでは転送設定を変更できないため、本体の現在設定のまま取得します。",
+                    text = "読み取り専用モードでは転送設定を変更できません。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-
-            state.lastCaptureMillis?.let { LabeledValue("取得時間", "$it ms") }
-            state.throughputBytesPerSecond?.let {
-                LabeledValue("スループット", "${EngineeringUnits.formatBytes(it.toLong())}/s")
-            }
-            state.visibleTraces.firstOrNull()?.waveform?.let { waveform ->
-                LabeledValue("点数", waveform.pointCount.toString())
             }
         }
 

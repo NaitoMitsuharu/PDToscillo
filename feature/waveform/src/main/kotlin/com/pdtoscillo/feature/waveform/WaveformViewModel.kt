@@ -119,7 +119,12 @@ class WaveformViewModel(private val session: InstrumentSession, private val expo
 
     fun onVisible() {
         if (_uiState.value.traces.isEmpty()) resetTraces()
-        if (_uiState.value.continuous) startContinuous()
+        if (_uiState.value.continuous) {
+            startContinuous()
+        } else if (_uiState.value.visibleTraces.isEmpty()) {
+            // 初回表示時に波形がなければ自動で連続取得を開始する
+            setContinuous(true)
+        }
     }
 
     /** 画面が見えなくなったら取得を止める。本体との通信を占有し続けない。 */
@@ -237,7 +242,9 @@ class WaveformViewModel(private val session: InstrumentSession, private val expo
             lastCaptureMillis = elapsed,
             throughputBytesPerSecond = totalBytes * MILLIS_PER_SECOND / elapsed,
         )
-        rebuildRenderData(resetWindow = _uiState.value.window == null)
+        // 連続取得中はウィンドウを維持する（チラつき防止）。初回または手動スケールのみリセット。
+        val isContinuous = _uiState.value.continuous
+        rebuildRenderData(resetWindow = !isContinuous && _uiState.value.window == null)
     }
 
     /** 自動スケール。表示中の波形が収まる範囲へ戻す。 */

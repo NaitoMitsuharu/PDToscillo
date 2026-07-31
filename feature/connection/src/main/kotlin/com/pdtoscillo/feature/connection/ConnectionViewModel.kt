@@ -34,9 +34,11 @@ data class ConnectionUiState(
     val hostInput: String = "",
     val portInput: String = ConnectionConfig.DEFAULT_PORT.toString(),
     val transportType: TransportType = TransportType.RAW_SOCKET,
-    val bindStrategy: SocketBindStrategy = SocketBindStrategy.ETHERNET_SOCKET_FACTORY,
+    val bindStrategy: SocketBindStrategy = SocketBindStrategy.SYSTEM_DEFAULT,
     val terminator: LineTerminator = LineTerminator.LF,
     val autoReconnect: Boolean = true,
+    /** 詳細設定セクションの開閉状態。 */
+    val settingsExpanded: Boolean = false,
     val connectionState: ConnectionState = ConnectionState.Disconnected,
     val networkStatus: NetworkStatus = NetworkStatus.UNKNOWN,
     val identity: InstrumentIdentity? = null,
@@ -280,7 +282,15 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
      */
     fun startDiscovery() {
         if (_uiState.value.discovering) return
-        val localAddress = _uiState.value.networkStatus.ethernetLink?.primaryIpv4?.address
+        val networkStatus = _uiState.value.networkStatus
+        // テザリングモード等で ConnectivityManager が Ethernet を報告しない場合は
+        // NetworkInterface の列挙（systemInterfaces）からアドレスを取得する。
+        val localAddress = networkStatus.ethernetLink?.primaryIpv4?.address
+            ?: networkStatus.systemInterfaces
+                .firstOrNull { it.looksLikeEthernet }
+                ?.addresses
+                ?.firstOrNull { !it.address.contains(':') }
+                ?.address
         if (localAddress == null) {
             showError(
                 ScopeError.EthernetUnavailable(
@@ -339,6 +349,42 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
         _uiState.value = _uiState.value.copy(error = null, errorRemedy = null)
     }
 
+    fun setSettingsExpanded(expanded: Boolean) {
+        _uiState.value = _uiState.value.copy(settingsExpanded = expanded)
+    }
+
+    /**
+     * LAN 接続を検出して自動で探索・接続する。
+     * 既接続 / 処理中 の場合は何もしない。
+     * 前回の接続先が記憶されていれば直接接続、なければサブネット探索を行う。
+     */
+    fun triggerAutoConnect() {
+        val state = _uiState.value
+        if (state.connectionState.isConnected || state.busy || state.discovering) return
+
+        if (state.hostInput.isNotBlank() && !state.hostError) {
+            // 前回の接続先が記憶されている — 直接接続
+            connect()
+        } else {
+            // 接続先不明 — 探索して最初に見つかった Tektronix 機器へ接続
+            startDiscovery()
+            viewModelScope.launch {
+                repeat(MAX_AUTO_CONNECT_POLLS) {
+                    kotlinx.coroutines.delay(AUTO_CONNECT_POLL_MILLIS)
+                    val current = _uiState.value
+                    val found = current.discoveredDevices.firstOrNull { it.looksLikeTektronix }
+                    if (found != null) {
+                        selectDiscovered(found)
+                        kotlinx.coroutines.delay(200)
+                        if (!_uiState.value.connectionState.isConnected) connect()
+                        return@launch
+                    }
+                    if (!current.discovering) return@launch
+                }
+            }
+        }
+    }
+
     private fun addSavedDevice(config: ConnectionConfig) {
         val identity = session.client.identity.value
         val label = identity?.model?.takeIf { it.isNotBlank() } ?: config.host
@@ -377,6 +423,8 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
     companion object {
         private const val COMMUNICATING = "通信中"
         private const val MAX_SAVED_DEVICES = 10
+        private const val MAX_AUTO_CONNECT_POLLS = 60
+        private const val AUTO_CONNECT_POLL_MILLIS = 500L
 
         fun factory(session: InstrumentSession): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

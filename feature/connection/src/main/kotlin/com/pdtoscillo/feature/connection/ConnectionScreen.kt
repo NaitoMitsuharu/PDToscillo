@@ -1,5 +1,6 @@
 package com.pdtoscillo.feature.connection
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -23,12 +26,14 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,9 +55,13 @@ import com.pdtoscillo.core.ui.theme.MinTouchTarget
 const val CONNECTION_LIST_TAG = "connectionScreenList"
 
 /**
- * 接続画面。
+ * 接続画面（リデザイン版）。
  *
- * 最初にここへ来る。IP とポートを入れて接続し、うまくいかないときは診断で切り分ける。
+ * 上部: 接続状態・機器情報・Ethernet 状態
+ * 中部: IP/ポート入力 + 接続/切断ボタン（常に見える）
+ * 下部: 詳細設定（折りたたみ）+ 診断・ログ
+ *
+ * 初回表示時に自動探索 → 接続を試みる。
  */
 @Composable
 fun ConnectionScreen(
@@ -62,6 +71,11 @@ fun ConnectionScreen(
     onShareLog: (java.io.File) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 画面が初めて表示されたときに自動探索・接続を試みる
+    LaunchedEffect(Unit) {
+        viewModel.triggerAutoConnect()
+    }
 
     if (state.wizardVisible) {
         ConnectionWizardDialog(
@@ -79,17 +93,11 @@ fun ConnectionScreen(
     ) {
         item { Spacer(Modifier.height(4.dp)) }
 
-        item {
-            ConnectionStatusHeader(
-                state = state.connectionState,
-                readOnlyMode = state.readOnlyMode,
-                onReadOnlyChange = viewModel::setReadOnlyMode,
-            )
-        }
+        // ── 1. 状態バナー ──────────────────────────────────────────
+        item { StatusBanner(state = state, viewModel = viewModel) }
 
-        item {
-            BusyIndicator(visible = state.busy, label = state.busyLabel)
-        }
+        // ── 2. ビジー / エラー ────────────────────────────────────
+        item { BusyIndicator(visible = state.busy, label = state.busyLabel) }
 
         state.error?.let { error ->
             item {
@@ -108,112 +116,196 @@ fun ConnectionScreen(
             }
         }
 
+        // ── 3. 接続先入力 + ボタン ────────────────────────────────
+        item { ConnectCard(state = state, viewModel = viewModel) }
+
+        // ── 4. 自動探索の進行 / 結果 ─────────────────────────────
+        if (state.discovering || state.discoveredDevices.isNotEmpty()) {
+            item { DiscoverySection(state, viewModel) }
+        }
+
+        // ── 5. 機器情報（接続済みのとき） ────────────────────────
+        state.identity?.let {
+            item { IdentitySection(state) }
+        }
+
+        // ── 6. 詳細設定（折りたたみ） ─────────────────────────────
         item {
-            SectionCard(
-                title = "接続先",
-                trailing = {
-                    TextButton(onClick = { viewModel.setWizardVisible(true) }) { Text("初期設定の手順") }
-                },
-            ) {
+            ExpandableSettingsSection(state = state, viewModel = viewModel)
+        }
+
+        // ── 7. 折りたたみ内コンテンツ ────────────────────────────
+        if (state.settingsExpanded) {
+            item { EthernetInfoSection(state) }
+
+            if (state.diagnosticSteps.isNotEmpty()) {
+                item { DiagnosticsSection(state.diagnosticSteps) }
+            }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = viewModel::runDiagnostics,
+                        enabled = !state.busy,
+                        modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
+                    ) { Text("接続診断") }
+                    state.escopeUrl?.let { url ->
+                        OutlinedButton(
+                            onClick = { onOpenEscope(url) },
+                            modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
+                        ) { Text("e*Scope") }
+                    }
+                }
+            }
+
+            item { SessionLogSection(state, viewModel, onShareLog) }
+
+            if (state.savedDevices.isNotEmpty()) {
+                item {
+                    SectionCard(title = "保存済み機器") {
+                        state.savedDevices.forEach { device ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(device.label, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        "${device.host}:${device.port}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                TextButton(onClick = { viewModel.selectSaved(device) }) { Text("選択") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 状態バナー: 接続状態 + 読み取り専用トグル + LAN 状態をコンパクトに
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun StatusBanner(state: ConnectionUiState, viewModel: ConnectionViewModel) {
+    val (label, color) = statusLabelAndColor(state.connectionState)
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusChip(text = label, color = color)
+                Spacer(Modifier.width(8.dp))
+                // 機器名（接続済みのとき）
+                val model = state.identity?.model?.takeIf { it.isNotBlank() }
+                if (model != null) {
+                    Text(
+                        text = model,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Text(
+                        text = when (state.connectionState) {
+                            is ConnectionState.Connected -> "${state.connectionState.remoteAddress}:${state.connectionState.config.port}"
+                            is ConnectionState.Connecting -> "接続処理中..."
+                            is ConnectionState.Reconnecting -> "再接続中 ${state.connectionState.attempt}/${state.connectionState.maxAttempts}"
+                            else -> "未接続"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                // 読み取り専用トグル（ラベル省スペース）
+                if (state.connectionState.isConnected) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = if (state.readOnlyMode) "読み取り専用" else "設定変更可",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (state.readOnlyMode) MaterialTheme.colorScheme.onSurfaceVariant
+                            else Color(0xFFFFD180),
+                        )
+                        Switch(
+                            checked = !state.readOnlyMode,
+                            onCheckedChange = { viewModel.setReadOnlyMode(!it) },
+                        )
+                    }
+                }
+            }
+
+            // LAN 状態をコンパクトに
+            val link = state.networkStatus.ethernetLink
+            val sysEth = state.networkStatus.systemInterfaces.firstOrNull { it.looksLikeEthernet }
+            val ethIp = link?.primaryIpv4?.address
+                ?: sysEth?.addresses?.firstOrNull { !it.address.contains(':') }?.address
+            val ethName = link?.interfaceName ?: sysEth?.name ?: "—"
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val lanColor = if (ethIp != null) Color(0xFF69F0AE) else Color(0xFFB0BEC5)
+                StatusChip(text = if (ethIp != null) "LAN: $ethIp" else "LAN 未接続", color = lanColor, showDot = false)
+                if (ethIp != null) {
+                    Text(
+                        text = "($ethName)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 接続先カード: IP + ポート + 接続/切断
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun ConnectCard(state: ConnectionUiState, viewModel: ConnectionViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "接続先",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { viewModel.setWizardVisible(true) }) { Text("初期設定の手順") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = state.hostInput,
                     onValueChange = viewModel::onHostChange,
                     label = { Text("IP アドレス") },
-                    placeholder = { Text("192.168.10.2") },
+                    placeholder = { Text("10.175.225.2") },
                     isError = state.hostError,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.weight(3f),
                 )
-                if (state.hostError) {
-                    Text(
-                        text = "IP アドレスまたはホスト名の形式が正しくありません。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.portInput,
                     onValueChange = viewModel::onPortChange,
                     label = { Text("ポート") },
-                    supportingText = { Text("Tektronix Socket Server の初期候補は 4000") },
                     isError = state.portError,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.weight(2f),
                 )
             }
-        }
-
-        item {
-            SectionCard(title = "通信方式") {
-                Text("Transport", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TransportType.entries.forEach { type ->
-                        FilterChip(
-                            selected = state.transportType == type,
-                            onClick = { viewModel.onTransportChange(type) },
-                            label = { Text(transportLabel(type)) },
-                            enabled = type == TransportType.RAW_SOCKET,
-                        )
-                    }
-                }
-                if (state.transportType == TransportType.VXI11) {
-                    UnavailableNotice(
-                        "VXI-11 は未実装です。ONC RPC の自前実装が必要なため、まず Raw Socket を完成させています。",
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
-                Text("ソケットのバインド先", style = MaterialTheme.typography.labelLarge)
+            if (state.hostError) {
                 Text(
-                    text = "LAN 直結ではインターネット到達性が無いため、Ethernet は既定ルートに選ばれません。" +
-                        "バインドしないとモバイル回線へ出てしまいます。",
+                    text = "IP アドレスの形式が正しくありません。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.error,
                 )
-                Spacer(Modifier.height(4.dp))
-                Column {
-                    SocketBindStrategy.entries.forEach { strategy ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.heightIn(min = MinTouchTarget),
-                        ) {
-                            FilterChip(
-                                selected = state.bindStrategy == strategy,
-                                onClick = { viewModel.onBindStrategyChange(strategy) },
-                                label = { Text(bindStrategyLabel(strategy)) },
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-                Text("コマンド終端", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LineTerminator.entries.forEach { terminator ->
-                        FilterChip(
-                            selected = state.terminator == terminator,
-                            onClick = { viewModel.onTerminatorChange(terminator) },
-                            label = { Text(terminator.name) },
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("自動再接続", modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = state.autoReconnect,
-                        onCheckedChange = viewModel::onAutoReconnectChange,
-                    )
-                }
             }
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = viewModel::connect,
                     enabled = state.canConnect && !state.connectionState.isConnected,
@@ -226,111 +318,97 @@ fun ConnectionScreen(
                 ) { Text("切断") }
             }
         }
+    }
+}
 
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = viewModel::runDiagnostics,
-                    enabled = !state.busy,
-                    modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
-                ) { Text("接続診断") }
-                state.escopeUrl?.let { url ->
-                    OutlinedButton(
-                        onClick = { onOpenEscope(url) },
-                        modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
-                    ) { Text("e*Scope を開く") }
+// ─────────────────────────────────────────────────────────────
+// 詳細設定（折りたたみ）: 通信方式 / バインド先 / 終端文字 / 再接続
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun ExpandableSettingsSection(state: ConnectionUiState, viewModel: ConnectionViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = MinTouchTarget),
+            ) {
+                Text(
+                    text = "詳細設定",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { viewModel.setSettingsExpanded(!state.settingsExpanded) }) {
+                    Text(if (state.settingsExpanded) "▲ 閉じる" else "▼ 開く")
                 }
             }
-        }
 
-        item { SessionLogSection(state, viewModel, onShareLog) }
+            AnimatedVisibility(visible = state.settingsExpanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Spacer(Modifier.height(4.dp))
 
-        item { EthernetInfoSection(state) }
-
-        if (state.diagnosticSteps.isNotEmpty()) {
-            item { DiagnosticsSection(state.diagnosticSteps) }
-        }
-
-        item { IdentitySection(state) }
-
-        item { DiscoverySection(state, viewModel) }
-
-        if (state.savedDevices.isNotEmpty()) {
-            item {
-                SectionCard(title = "保存済み機器") {
-                    state.savedDevices.forEach { device ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(device.label, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    "${device.host}:${device.port}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            TextButton(onClick = { viewModel.selectSaved(device) }) { Text("選択") }
+                    // バインド方式
+                    Text("ソケットのバインド先", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = "テザリングモードでは「システム既定」を使ってください。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SocketBindStrategy.entries.forEach { strategy ->
+                            FilterChip(
+                                selected = state.bindStrategy == strategy,
+                                onClick = { viewModel.onBindStrategyChange(strategy) },
+                                label = { Text(bindStrategyLabel(strategy)) },
+                            )
                         }
                     }
+
+                    // 終端文字
+                    Text("コマンド終端", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LineTerminator.entries.forEach { terminator ->
+                            FilterChip(
+                                selected = state.terminator == terminator,
+                                onClick = { viewModel.onTerminatorChange(terminator) },
+                                label = { Text(terminator.name) },
+                            )
+                        }
+                    }
+
+                    // 自動再接続
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("自動再接続", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = state.autoReconnect,
+                            onCheckedChange = viewModel::onAutoReconnectChange,
+                        )
+                    }
+
+                    // Transport（VXI-11 未実装を示すだけなので折りたたみ内へ）
+                    Text("Transport", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TransportType.entries.forEach { type ->
+                            FilterChip(
+                                selected = state.transportType == type,
+                                onClick = { viewModel.onTransportChange(type) },
+                                label = { Text(transportLabel(type)) },
+                                enabled = type == TransportType.RAW_SOCKET,
+                            )
+                        }
+                    }
+                    if (state.transportType == TransportType.VXI11) {
+                        UnavailableNotice("VXI-11 は未実装です。Raw Socket を選択してください。")
+                    }
+
+                    Spacer(Modifier.height(4.dp))
                 }
             }
         }
-
-        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
-@Composable
-private fun ConnectionStatusHeader(state: ConnectionState, readOnlyMode: Boolean, onReadOnlyChange: (Boolean) -> Unit) {
-    SectionCard(
-        title = "状態",
-        trailing = {
-            val (label, color) = statusLabelAndColor(state)
-            StatusChip(text = label, color = color)
-        },
-    ) {
-        when (state) {
-            is ConnectionState.Connected -> {
-                LabeledValue("接続先", "${state.remoteAddress ?: "?"}:${state.config.port}")
-                LabeledValue("こちらのアドレス", state.localAddress ?: "不明")
-            }
-
-            is ConnectionState.Reconnecting ->
-                LabeledValue("再接続", "${state.attempt} / ${state.maxAttempts}")
-
-            is ConnectionState.Failed ->
-                LabeledValue("最後のエラー", state.error.detail ?: state.error::class.simpleName.orEmpty())
-
-            else -> Unit
-        }
-
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("読み取り専用モード", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = if (readOnlyMode) {
-                        "設定変更コマンドを拒否します。接続直後は必ず有効です。"
-                    } else {
-                        "設定変更を許可しています。計測器の状態が変わります。"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = readOnlyMode, onCheckedChange = onReadOnlyChange)
-        }
-    }
-}
-
-/**
- * セッションログの記録。
- *
- * 実機で最初に接続するときは、何が起きたかを後から追えることが重要になる。
- * 接続の前に記録を開始しておくと、接続のやり取りが最初から残る。
- */
 @Composable
 private fun SessionLogSection(state: ConnectionUiState, viewModel: ConnectionViewModel, onShareLog: (java.io.File) -> Unit) {
     val log = state.logState
@@ -343,27 +421,16 @@ private fun SessionLogSection(state: ConnectionUiState, viewModel: ConnectionVie
             )
         },
     ) {
-        Text(
-            text = "送受信した SCPI コマンドと応答、ネットワークの状態、診断結果を" +
-                "端末内のファイルへ残します。実機へ最初に接続するときは、" +
-                "**接続する前に**記録を開始してください。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
         val fileName = log.fileName
         if (fileName != null) {
-            Spacer(Modifier.height(8.dp))
             LabeledValue("ファイル", fileName)
             LabeledValue("サイズ", EngineeringUnits.formatBytes(log.sizeBytes))
             LabeledValue("記録した通信", log.entryCount.toString())
             if (log.truncated) {
-                Spacer(Modifier.height(8.dp))
-                UnavailableNotice("ログが上限に達したため記録を停止しました。")
+                UnavailableNotice("ログが上限に達しました。")
             }
+            Spacer(Modifier.height(8.dp))
         }
-
-        Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = viewModel::startLogging,
@@ -376,8 +443,6 @@ private fun SessionLogSection(state: ConnectionUiState, viewModel: ConnectionVie
                 modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
             ) { Text("停止") }
         }
-
-        // 記録中でも取り出せる。長時間の記録の途中経過を確認したい場合に使う。
         val filePath = log.filePath
         if (filePath != null) {
             Spacer(Modifier.height(8.dp))
@@ -385,12 +450,6 @@ private fun SessionLogSection(state: ConnectionUiState, viewModel: ConnectionVie
                 onClick = { onShareLog(java.io.File(filePath)) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
             ) { Text("ログを送る / 保存する") }
-            Text(
-                text = "保存先: $filePath",
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -407,27 +466,19 @@ private fun EthernetInfoSection(state: ConnectionUiState) {
                 LabeledValue("IP アドレス", address.address)
                 LabeledValue("サブネットマスク", address.subnetMask ?: "不明")
             }
-            LabeledValue("ゲートウェイ", link.gateways.joinToString().ifEmpty { "なし（直結では正常）" })
-            LabeledValue("DNS", link.dnsServers.joinToString().ifEmpty { "なし" })
-            link.mtu?.let { LabeledValue("MTU", it.toString()) }
         }
         LabeledValue(
             "有効な経路",
             status.activeTransports.joinToString { it.name }.ifEmpty { "不明" },
         )
         if (status.hasCellular) {
-            Spacer(Modifier.height(8.dp))
-            UnavailableNotice(
-                "モバイル通信が有効です。バインド方式を Ethernet にしておくと、" +
-                    "誤ってモバイル回線へ接続することを防げます。",
-            )
+            UnavailableNotice("モバイル通信が有効です。テザリングモードでは「システム既定」を使ってください。")
         }
         if (status.hasEthernetLikeInterfaceOnly) {
-            Spacer(Modifier.height(8.dp))
             UnavailableNotice(
-                "Android は Ethernet として報告していませんが、それらしいインターフェースがあります: " +
-                    status.systemInterfaces.filter { it.looksLikeEthernet }.joinToString { it.name } +
-                    "。バインド方式を「システム既定」にして接続を試してください。",
+                "Android は Ethernet として報告していませんが、${
+                    status.systemInterfaces.filter { it.looksLikeEthernet }.joinToString { it.name }
+                } が見つかっています。バインド方式を「システム既定」にして接続を試してください。",
             )
         }
     }
@@ -441,29 +492,22 @@ private fun IdentitySection(state: ConnectionUiState) {
         LabeledValue("モデル", identity.model.ifBlank { "不明" })
         LabeledValue("シリアル番号", identity.serialNumber ?: "不明")
         LabeledValue("ファームウェア", identity.firmwareVersion ?: "不明")
-        Spacer(Modifier.height(8.dp))
-        Text("*IDN? の生応答", style = MaterialTheme.typography.labelMedium)
+        val capabilities = state.capabilities
+        if (capabilities != null) {
+            Spacer(Modifier.height(8.dp))
+            LabeledValue("アナログ CH", capabilities.analogChannelCount.toString())
+            LabeledValue("デジタル CH", capabilities.digitalChannelCount.toString())
+            if (capabilities.undeterminedFeatures.isNotEmpty()) {
+                UnavailableNotice("未確定の機能: ${capabilities.undeterminedFeatures.joinToString()}")
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text("*IDN? の生応答", style = MaterialTheme.typography.labelSmall)
         Text(
             text = identity.raw,
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
         )
-
-        val capabilities = state.capabilities
-        if (capabilities != null) {
-            Spacer(Modifier.height(12.dp))
-            LabeledValue("世代", capabilities.family.name)
-            LabeledValue("アナログ CH", capabilities.analogChannelCount.toString())
-            LabeledValue("デジタル CH", capabilities.digitalChannelCount.toString())
-            LabeledValue("検出方法", capabilities.detectionSource.name)
-            if (capabilities.undeterminedFeatures.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                UnavailableNotice(
-                    "判定できなかった機能: ${capabilities.undeterminedFeatures.joinToString()}。" +
-                        "安全側に倒して無効化しています。必要な操作は SCPI コンソールから実行できます。",
-                )
-            }
-        }
     }
 }
 
@@ -475,27 +519,15 @@ private fun DiagnosticsSection(steps: List<DiagnosticStep>) {
                 verticalAlignment = Alignment.Top,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             ) {
-                StatusChip(
-                    text = statusMark(step.status),
-                    color = statusColor(step.status),
-                    showDot = false,
-                )
+                StatusChip(text = statusMark(step.status), color = statusColor(step.status), showDot = false)
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(diagnosticLabel(step.id), style = MaterialTheme.typography.bodyMedium)
                     step.detail?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     step.remedy?.let {
-                        Text(
-                            text = "対処: $it",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
+                        Text("対処: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
                     }
                 }
             }
@@ -510,26 +542,27 @@ private fun DiscoverySection(state: ConnectionUiState, viewModel: ConnectionView
         trailing = {
             if (state.discovering) {
                 TextButton(onClick = viewModel::stopDiscovery) { Text("停止") }
-            } else {
-                TextButton(onClick = viewModel::startDiscovery) { Text("探索") }
+            } else if (state.discoveredDevices.isEmpty()) {
+                TextButton(onClick = viewModel::startDiscovery) { Text("再探索") }
             }
         },
     ) {
-        Text(
-            text = "Ethernet と同じサブネット内のみを、上限を設けて探索します。" +
-                "見つけた機器へは *IDN? だけを送り、設定は変更しません。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         state.discoveryProgress?.let { progress ->
-            Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { progress.scanned.toFloat() / progress.total.coerceAtLeast(1) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                "${progress.scanned} / ${progress.total}",
+                "探索中: ${progress.scanned} / ${progress.total}",
                 style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        if (state.discoveredDevices.isEmpty() && state.discovering) {
+            Text(
+                "Tektronix 機器を探しています...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         state.discoveredDevices.forEach { device ->
@@ -540,7 +573,7 @@ private fun DiscoverySection(state: ConnectionUiState, viewModel: ConnectionView
                 Column(modifier = Modifier.weight(1f)) {
                     Text("${device.host}:${device.port}", style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        text = device.identityRaw ?: "応答なし（ポートは開いています）",
+                        text = device.identityRaw ?: "応答なし",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -597,7 +630,7 @@ private fun transportLabel(type: TransportType): String = when (type) {
 }
 
 private fun bindStrategyLabel(strategy: SocketBindStrategy): String = when (strategy) {
-    SocketBindStrategy.ETHERNET_SOCKET_FACTORY -> "Ethernet（socketFactory）"
-    SocketBindStrategy.ETHERNET_BIND_SOCKET -> "Ethernet（bindSocket）"
-    SocketBindStrategy.SYSTEM_DEFAULT -> "システム既定（バインドなし）"
+    SocketBindStrategy.ETHERNET_SOCKET_FACTORY -> "Ethernet (socketFactory)"
+    SocketBindStrategy.ETHERNET_BIND_SOCKET -> "Ethernet (bindSocket)"
+    SocketBindStrategy.SYSTEM_DEFAULT -> "システム既定"
 }

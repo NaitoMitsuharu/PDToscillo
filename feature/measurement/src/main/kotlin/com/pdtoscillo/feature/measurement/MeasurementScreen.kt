@@ -2,6 +2,7 @@ package com.pdtoscillo.feature.measurement
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -23,7 +26,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pdtoscillo.core.common.EngineeringUnits
@@ -197,59 +203,89 @@ private fun AddMeasurementSection(state: MeasurementUiState, viewModel: Measurem
 
 @Composable
 private fun MeasurementCard(slot: MeasurementSlot, state: MeasurementUiState, viewModel: MeasurementViewModel) {
-    SectionCard(
-        title = "${slot.type?.displayName ?: slot.typeRaw ?: "測定 ${slot.slot}"}" +
-            " (${slot.source?.displayName ?: "?"})",
-        trailing = {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Box(modifier = Modifier.padding(16.dp)) {
+            // 削除ボタン（右上）
             TextButton(
                 onClick = { viewModel.removeMeasurement(slot.slot) },
                 enabled = !state.readOnlyMode && !state.busy,
-            ) { Text("削除") }
-        },
-    ) {
-        if (slot.isNotMeasurable) {
-            // 9.91e37 をそのまま出すと意味が分からない。何が起きているかを言葉で示す。
-            UnavailableNotice(
-                "測定できません。対象の波形が表示されているか、信号が測定条件を満たしているか確認してください。",
-            )
-        } else {
-            val unit = slot.unit ?: slot.type?.quantity?.defaultUnit ?: ""
-            ValueRow("現在値", slot.statistics.current, unit)
-            if (state.statisticsEnabled) {
-                ValueRow("平均", slot.statistics.mean, unit)
-                ValueRow("最小", slot.statistics.minimum, unit)
-                ValueRow("最大", slot.statistics.maximum, unit)
-                ValueRow("標準偏差", slot.statistics.standardDeviation, unit)
-                LabeledValue("サンプル数", slot.statistics.sampleCount?.toString() ?: "---")
-            }
-        }
+                modifier = Modifier.align(Alignment.TopEnd),
+            ) { Text("削除", style = MaterialTheme.typography.labelSmall) }
 
-        Spacer(Modifier.height(8.dp))
-        Text("ソース変更", style = MaterialTheme.typography.labelMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            state.availableSources.forEach { source ->
-                FilterChip(
-                    selected = slot.source == source,
-                    onClick = { viewModel.changeSource(slot.slot, source) },
-                    label = { Text(source.displayName) },
-                    enabled = !state.readOnlyMode && !state.busy,
+            androidx.compose.foundation.layout.Column {
+                // 測定名 + ソース
+                Text(
+                    text = slot.type?.displayName ?: slot.typeRaw ?: "測定 ${slot.slot}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
                 )
+                Text(
+                    text = slot.source?.displayName ?: "?",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+
+                if (slot.isNotMeasurable) {
+                    UnavailableNotice("波形が表示されているか、信号が測定条件を満たしているか確認してください。")
+                } else {
+                    val unit = slot.unit ?: slot.type?.quantity?.defaultUnit ?: ""
+                    val formatted = formatMeasValue(slot.statistics.current, unit)
+                    // 現在値を大きく表示
+                    Row(verticalAlignment = Alignment.Baseline, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = formatted.first,
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.Light,
+                        )
+                        Text(
+                            text = formatted.second,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
+                    if (state.statisticsEnabled) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            MiniStat("平均", slot.statistics.mean, unit)
+                            MiniStat("最小", slot.statistics.minimum, unit)
+                            MiniStat("最大", slot.statistics.maximum, unit)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    state.availableSources.forEach { source ->
+                        FilterChip(
+                            selected = slot.source == source,
+                            onClick = { viewModel.changeSource(slot.slot, source) },
+                            label = { Text(source.displayName) },
+                            enabled = !state.readOnlyMode && !state.busy,
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ValueRow(label: String, value: Double?, unit: String) {
-    val text = when {
-        value == null -> "---"
-        com.pdtoscillo.core.model.MeasurementStatistics.isNotANumber(value) -> "測定不可"
-        else -> EngineeringUnits.format(value, unit).value
+private fun MiniStat(label: String, value: Double?, unit: String) {
+    val (v, u) = formatMeasValue(value, unit)
+    androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = "$v $u".trim(), style = MaterialTheme.typography.bodySmall)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    val displayUnit = if (value == null || com.pdtoscillo.core.model.MeasurementStatistics.isNotANumber(value)) {
-        ""
-    } else {
-        EngineeringUnits.format(value, unit).unit
-    }
-    LabeledValue(label = label, value = text, unit = displayUnit.ifEmpty { null })
+}
+
+private fun formatMeasValue(value: Double?, unit: String): Pair<String, String> {
+    if (value == null) return "---" to ""
+    if (com.pdtoscillo.core.model.MeasurementStatistics.isNotANumber(value)) return "測定不可" to ""
+    val eng = EngineeringUnits.format(value, unit)
+    return eng.value to eng.unit
 }
