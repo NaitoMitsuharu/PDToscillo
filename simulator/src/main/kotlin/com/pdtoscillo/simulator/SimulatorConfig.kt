@@ -98,6 +98,26 @@ enum class SimulatedModel(
         supportsConfigurationQueries = false,
     ),
 
+    /**
+     * 実機（2026-07-31 に接続確認）と同じモデル。無印 Gen1・4ch・350 MHz。
+     *
+     * オシロ無しでネットワーク/バインド層を検証する際の代役に使う。Gen1 なので
+     * `CONFIGuration:*?` を持たず、機能検出はモデル名フォールバックになる想定。
+     * ファームウェア文字列は暫定（実機の `*IDN?` を取得したら docs/hardware-validation.md
+     * の値へ合わせること）。
+     */
+    DPO4034(
+        idnModel = "DPO4034",
+        serialNumber = "C012345",
+        firmware = "CF:91.1CT FV:v2.48",
+        analogChannels = 4,
+        digitalChannels = 0,
+        hasRf = false,
+        hasAfg = false,
+        hasDvm = false,
+        supportsConfigurationQueries = false,
+    ),
+
     /** 無印世代の MSO。デジタル 16 ch。 */
     MSO4104(
         idnModel = "MSO4104",
