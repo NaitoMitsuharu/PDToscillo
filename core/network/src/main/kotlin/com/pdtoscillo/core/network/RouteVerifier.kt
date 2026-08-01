@@ -12,11 +12,19 @@ import java.net.Socket
  * ソケットのローカルアドレスが Ethernet に割り当てられたアドレスと一致するかで判定する。
  */
 object RouteVerifier {
-    fun verify(socket: Socket, requestedStrategy: SocketBindStrategy, ethernetLink: EthernetLinkInfo?): TransportRouteInfo {
+    fun verify(
+        socket: Socket,
+        requestedStrategy: SocketBindStrategy,
+        ethernetLink: EthernetLinkInfo?,
+        ethernetLikeAddresses: Set<String> = emptySet(),
+    ): TransportRouteInfo {
         val localAddress = socket.localAddress?.hostAddress
         val remoteAddress = socket.inetAddress?.hostAddress
 
-        val ethernetAddresses = ethernetLink?.addresses?.map { it.address }?.toSet().orEmpty()
+        // ConnectivityManager の Ethernet アドレス（テザリング扱いでは空になり得る）に加え、
+        // NetworkInterface 列挙で得た eth0 相当のアドレスも「有線側」とみなす。
+        // どちらのアドレスから出ていても、実際には有線 I/F を通っている。
+        val ethernetAddresses = ethernetLink?.addresses?.map { it.address }?.toSet().orEmpty() + ethernetLikeAddresses
         val boundToEthernet = localAddress != null && localAddress in ethernetAddresses
 
         val warning = buildWarning(

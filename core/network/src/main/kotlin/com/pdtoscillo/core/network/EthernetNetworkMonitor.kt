@@ -223,22 +223,31 @@ class EthernetNetworkMonitor(context: Context) {
         return link.addresses.any { local ->
             val localAddress = runCatching { java.net.InetAddress.getByName(local.address) }.getOrNull()
             if (localAddress !is Inet4Address) return@any false
-            sameSubnet(localAddress, target, local.prefixLength)
+            LocalAddressSelector.sameSubnet(localAddress, target, local.prefixLength)
         }
     }
 
-    private fun sameSubnet(a: Inet4Address, b: Inet4Address, prefixLength: Int): Boolean {
-        if (prefixLength !in 0..IPV4_BITS) return false
-        val left = a.address.fold(0L) { acc, byte -> (acc shl BITS_PER_OCTET) or (byte.toLong() and BYTE_MASK) }
-        val right = b.address.fold(0L) { acc, byte -> (acc shl BITS_PER_OCTET) or (byte.toLong() and BYTE_MASK) }
-        val mask = if (prefixLength == 0) 0L else (0xFFFFFFFFL shl (IPV4_BITS - prefixLength)) and 0xFFFFFFFFL
-        return (left and mask) == (right and mask)
-    }
+    /**
+     * eth0 相当のインターフェースが持つ IPv4 アドレス一覧。
+     *
+     * `ConnectivityManager` が Ethernet を報告しない（テザリング扱いの）環境でも、
+     * `NetworkInterface` 列挙から取得できる。[SocketBindStrategy.ETHERNET_INTERFACE_ADDRESS]
+     * のバインド先を決めるために使う。
+     */
+    fun ethernetLikeLocalAddresses(): List<InterfaceAddress> = _status.value.systemInterfaces
+        .filter { it.looksLikeEthernet }
+        .flatMap { it.addresses }
+        .filter { !it.address.contains(':') }
+
+    /**
+     * 指定ホストへ通信する際にソースアドレスへ固定すべき有線 I/F の IPv4。
+     *
+     * eth0 相当の候補のうち、宛先と同一サブネットのものを優先する。無ければ先頭を返す。
+     * 有線 I/F がまったく無ければ null。
+     */
+    fun localAddressForTarget(targetHost: String): String? = LocalAddressSelector.selectForTarget(ethernetLikeLocalAddresses(), targetHost)
 
     private companion object {
         const val TAG = "EthernetMonitor"
-        const val IPV4_BITS = 32
-        const val BITS_PER_OCTET = 8
-        const val BYTE_MASK = 0xFFL
     }
 }

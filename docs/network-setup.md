@@ -61,17 +61,46 @@ Android の既定ルートはインターネット到達性のあるネットワ
 **何もしないと直結した Ethernet ではなくモバイル回線へ接続を試みます。**
 LAN 直結ではインターネット到達性が無く、Ethernet が既定ルートに選ばれないためです。
 
-本アプリは次の手順でこれを回避します。
+本アプリは次のいずれかの方式でこれを回避します（接続画面の「詳細設定」で選べます）。
 
-1. `ConnectivityManager.registerNetworkCallback` に `TRANSPORT_ETHERNET` の
-   `NetworkRequest` を登録し、Ethernet の `Network` を取得する
-   （インターネット到達性を要求しないリクエストを使う）
-2. 取得できない場合は既存ネットワークを走査して `TRANSPORT_ETHERNET` を探す
-3. `network.socketFactory.createSocket()` でソケットを生成する
-   （代替として `network.bindSocket(socket)` も選択できる）
-4. 接続後、ソケットのローカルアドレスが Ethernet の `LinkProperties` の
-   `linkAddresses` に含まれることを検証する
-5. 含まれない場合は「モバイル回線へ誤ルーティングされている可能性」として警告する
+- **有線を固定（ETHERNET_INTERFACE_ADDRESS・推奨）**:
+  `NetworkInterface` 列挙で得た eth0 の IP を、ソケットのソースアドレスとして
+  `Socket.bind()` で固定する。宛先が eth0 の直結サブネット上にあれば、OS は
+  最長プレフィックス一致で必ず eth0 の経路を選ぶ。Android の `Network` オブジェクトを
+  必要としないため、**LAN 端子がイーサネットテザリング扱いになり
+  `TRANSPORT_ETHERNET` として登録されない端末（PDT-FP1 など）でも機能する。**
+- **Ethernet (socketFactory) / (bindSocket)**:
+  `ConnectivityManager` の `TRANSPORT_ETHERNET` な `Network` を取得し、
+  `network.socketFactory.createSocket()` または `network.bindSocket(socket)` で結びつける。
+  端末が LAN を Ethernet として登録している場合に使える。
+- **システム既定**: バインドしない。切り分け用。直結サブネットが他経路と重ならなければ、
+  OS のルーティングで eth0 に載る。
+
+接続後は、どの方式でも**ソケットのローカルアドレスが eth0 の IP と一致するか**を検証し、
+一致しなければ「モバイル回線へ誤ルーティングされている可能性」として警告します。
+`TRANSPORT_ETHERNET` が無い環境でも、`NetworkInterface` 列挙で得た eth0 のアドレスと
+突き合わせて判定します。
+
+> 実機 DPO4034 では、PDT-FP1 の LAN 端子が `TRANSPORT_ETHERNET` として登録されず、
+> `socketFactory` / `bindSocket` は使えませんでした。「有線を固定」はこの状況のための方式です。
+> 自動接続は「有線を固定」を先に試し、使えなければ「システム既定」へ切り替えます。
+
+### 静的 IP でサブネットを安定させる（推奨）
+
+DHCP のままだとオシロの IP が再起動で変わり得ます。オシロスコープの**前面パネル**で
+静的 IP に固定すると、サブネットが毎回同じになり、他経路（Wi-Fi / モバイル）と
+重ならない私用レンジ（例 `192.168.10.x`）に追い込めます。
+
+```text
+Utility → I/O → Ethernet Network Settings → Change Instrument Settings
+  Network Config: Manual
+  IP Address    : 192.168.10.2
+  Subnet Mask   : 255.255.255.0
+```
+
+> オシロの IP をアプリから SCPI（`ETHERnet:IPADDress` 等）で書き換えることはしません。
+> 変更した瞬間に接続が切れるうえ、実機 DPO4034（Gen 1）でのコマンド対応は未検証のためです。
+> IP の設定は本体前面パネルで行ってください。
 
 必要な権限は次の 2 つだけです。位置情報権限は要求しません。
 

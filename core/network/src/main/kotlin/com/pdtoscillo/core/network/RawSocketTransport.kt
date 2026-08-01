@@ -78,7 +78,7 @@ class RawSocketTransport(private val socketProvider: SocketProvider, private val
 
             withContext(ioDispatcher) {
                 val provided = try {
-                    socketProvider.createSocket(config.bindStrategy)
+                    socketProvider.createSocket(config.bindStrategy, config.host)
                 } catch (exception: ScpiException) {
                     _state.value = ConnectionState.Failed(config, exception.error)
                     throw exception
@@ -109,6 +109,7 @@ class RawSocketTransport(private val socketProvider: SocketProvider, private val
                     socket = target,
                     requestedStrategy = config.bindStrategy,
                     ethernetLink = provided.ethernetLink ?: socketProvider.ethernetLink(),
+                    ethernetLikeAddresses = socketProvider.ethernetLikeAddresses(),
                 )
                 _routeInfo.value = route
                 route.warning?.let { PdtLog.w(TAG, it) }

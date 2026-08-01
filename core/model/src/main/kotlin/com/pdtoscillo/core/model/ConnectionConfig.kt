@@ -28,6 +28,21 @@ enum class SocketBindStrategy {
     /** 生成済みソケットへ `Network.bindSocket()` を適用する。 */
     ETHERNET_BIND_SOCKET,
 
+    /**
+     * ソケットのソース（ローカル）アドレスを有線 I/F の IP に固定する。
+     *
+     * 上の 2 方式は Android の `TRANSPORT_ETHERNET` な `Network` オブジェクトを必要とする。
+     * ところが PDT-FP1 の LAN 端子はイーサネットテザリング扱いになり、`ConnectivityManager`
+     * に Ethernet として登録されないことがある（実機 DPO4034 で確認）。その場合、上の 2 方式は
+     * バインド対象の `Network` が無く失敗する。
+     *
+     * 本方式は `Network` 抽象を経由せず、`NetworkInterface` 列挙で得た eth0 相当の IP を
+     * `Socket.bind()` でソースアドレスに設定する。宛先が eth0 の直結サブネット上にあれば、
+     * OS は最長プレフィックス一致でその経路（eth0）を選ぶため、モバイル回線へ漏れない。
+     * テザリングモードでも機能する。
+     */
+    ETHERNET_INTERFACE_ADDRESS,
+
     /** バインドしない（既定ルート）。診断や Wi-Fi 経由の切り分け用。 */
     SYSTEM_DEFAULT,
 }

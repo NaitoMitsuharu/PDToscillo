@@ -74,13 +74,25 @@ Port    : 4000
 ### アプリ側の必須設定
 
 ```text
-バインド方式: システム既定（SYSTEM_DEFAULT）
+バインド方式: 有線を固定（ETHERNET_INTERFACE_ADDRESS）を推奨
   テザリングモードでは ConnectivityManager が eth0 を認識しないため、
-  ETHERNET_SOCKET_FACTORY / ETHERNET_BIND_SOCKET は両方失敗する。
-  SYSTEM_DEFAULT を使うと OS のルーティングテーブルが
-  10.175.225.x を eth0 経由で自動転送するため接続できる。
+  ETHERNET_SOCKET_FACTORY / ETHERNET_BIND_SOCKET は両方失敗する
+  （Network オブジェクトが無く、バインド先を指定できないため）。
+
+  そこで「有線を固定」方式を追加した。Network 抽象を経由せず、
+  NetworkInterface 列挙で得た eth0 の IP（10.175.225.170）を
+  Socket.bind() でソースアドレスに固定する。宛先 10.175.225.142 は
+  eth0 の直結サブネット上にあるため、OS は最長プレフィックス一致で
+  必ず eth0 の経路を選ぶ。モバイル回線へ漏れない。
+  → この方式が実機で eth0 経由になることは HARDWARE_VALIDATION_REQUIRED #2 で確認する。
+
+  自動接続は「有線を固定」を先に試し、使えない環境では
+  SYSTEM_DEFAULT へ自動フォールバックする。SYSTEM_DEFAULT でも
+  10.175.225.x は直結サブネット経由で eth0 に載るため接続自体は成立する。
 
 IP   : 10.175.225.142（DHCP なので再起動時に変わる可能性あり）
+       → オシロ前面パネルで静的 IP に固定するとサブネットが安定する
+         （docs/network-setup.md 参照）。アプリからは IP を書き換えない。
 Port : 4000
 Terminator: LF
 Protocol  : Raw Socket（VXI-11 は未実装）
@@ -161,13 +173,25 @@ CURVe? レスポンス形式（IEEE 488.2 バイナリブロック）:
 
 ### 2. Ethernet へのソケットバインドが実際に効くか
 
-- **確認対象**: モバイル回線ではなく Ethernet 経由で接続されること
-- **実行するコマンド**: モバイル通信と Wi-Fi を有効にしたまま接続診断を実行
-- **期待する応答**: 「経路検証: Ethernet 経由」。ソケットのローカルアドレスが Ethernet の IP と一致
+- **状況（DPO4034 / 2026-07-31）**: テザリング扱いで `TRANSPORT_ETHERNET` が無く、
+  `socketFactory` / `bindSocket` は使えないことが判明。対策として
+  **「有線を固定」方式（ETHERNET_INTERFACE_ADDRESS）** を追加した。
+  eth0 の IP をソケットのソースアドレスに `Socket.bind()` で固定する方式で、
+  Android の Network オブジェクトを必要としない。
+- **確認対象**: 「有線を固定」でモバイル回線ではなく eth0 経由で接続されること
+- **実行するコマンド**: モバイル通信と Wi-Fi を有効にしたまま、バインド方式「有線を固定」で
+  接続 → 接続診断を実行。あわせて `adb shell ip route get 10.175.225.142` で
+  `dev eth0` を通ることを直接確認する
+- **期待する応答**: 「経路検証: Ethernet 経由（警告なし）」。
+  ソケットのローカルアドレスが eth0 の IP（例 10.175.225.170）と一致
 - **失敗時の確認事項**:
-  - バインド方式を `socketFactory` と `bindSocket` で切り替えて再試行
-  - Wi-Fi を切って挙動が変わるか
+  - 「有線を固定」で bind に失敗する場合は例外メッセージをセッションログで確認
+  - `SYSTEM_DEFAULT` でも `ip route get` が `dev eth0` を返すか（直結サブネットなら返るはず）
+  - Wi-Fi / モバイルがオシロと同一サブネットを掴んでいないか（サブネット衝突）
   - VPN が有効になっていないか
+- **自動テスト状況**: ソースアドレス固定 → 接続 → `*IDN?` の一連は
+  `InterfaceAddressBindingIntegrationTest`（ループバックで eth0 を代用）で検証済み。
+  ただし**実機の eth0 で本当に有線側に載るか**はここで確認する必要がある。
 
 ### 3. Socket Server の既定ポートとプロトコル
 

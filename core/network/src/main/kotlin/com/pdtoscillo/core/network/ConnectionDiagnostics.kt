@@ -438,7 +438,8 @@ class ConnectionDiagnostics(private val monitor: EthernetNetworkMonitor?, privat
                 "LAN ケーブルの接続を確認してください。Ethernet を使わない場合はバインド方式を「システム既定」にしてください。"
 
             is ScopeError.BindFailed ->
-                "バインド方式を切り替えて再試行してください（socketFactory ↔ bindSocket）。"
+                "バインド方式を切り替えて再試行してください（「有線を固定」↔「システム既定」）。" +
+                    "テザリング接続では「有線を固定」を推奨します。"
 
             is ScopeError.ConnectTimeout ->
                 "IP アドレスが正しいか、双方が同じサブネットにあるかを確認してください。"

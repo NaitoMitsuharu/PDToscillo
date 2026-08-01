@@ -354,7 +354,8 @@ private fun ExpandableSettingsSection(state: ConnectionUiState, viewModel: Conne
                     // バインド方式
                     Text("ソケットのバインド先", style = MaterialTheme.typography.labelLarge)
                     Text(
-                        text = "テザリングモードでは「システム既定」を使ってください。",
+                        text = "テザリングモードでは「有線を固定」を推奨します。" +
+                            "自動接続はこれを試し、使えなければ「システム既定」へ切り替えます。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -635,5 +636,6 @@ private fun transportLabel(type: TransportType): String = when (type) {
 private fun bindStrategyLabel(strategy: SocketBindStrategy): String = when (strategy) {
     SocketBindStrategy.ETHERNET_SOCKET_FACTORY -> "Ethernet (socketFactory)"
     SocketBindStrategy.ETHERNET_BIND_SOCKET -> "Ethernet (bindSocket)"
+    SocketBindStrategy.ETHERNET_INTERFACE_ADDRESS -> "有線を固定"
     SocketBindStrategy.SYSTEM_DEFAULT -> "システム既定"
 }

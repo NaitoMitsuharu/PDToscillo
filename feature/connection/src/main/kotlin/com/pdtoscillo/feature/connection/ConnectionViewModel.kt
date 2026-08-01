@@ -202,34 +202,42 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
 
         val config = currentConfig()
         session.rememberConfig(config)
-        launchBusy("接続中") {
-            session.sessionLogger.section("接続を開始: ${config.host}:${config.port}")
-            session.client.connect(config)
+        launchBusy("接続中") { runConnectSequence(config) }
+    }
 
-            // 経路の検証結果を残す。モバイル回線へ出ていた場合、
-            // ここを見れば後から分かる。
-            session.client.routeInfo.value?.let { route ->
-                session.sessionLogger.note(
-                    "経路: local=${route.localAddress} -> remote=${route.remoteAddress}:${route.remotePort} " +
-                        "bindStrategy=${route.requestedBindStrategy} Ethernet経由=${route.boundToEthernet}",
-                )
-                route.warning?.let { session.sessionLogger.note("経路の警告: $it") }
-            }
+    /**
+     * 実際の接続シーケンス。接続 → 経路検証の記録 → `*IDN?` → 機能検出 → 保存。
+     *
+     * 失敗時は [session] の client が例外を投げる。呼び出し側でフォールバック判断ができるよう、
+     * ここでは握りつぶさない。
+     */
+    private suspend fun runConnectSequence(config: ConnectionConfig) {
+        session.sessionLogger.section("接続を開始: ${config.host}:${config.port} (バインド: ${config.bindStrategy})")
+        session.client.connect(config)
 
-            val identity = session.client.identify()
-            // *IDN? の生応答は機種の特定に直結する。必ず残す。
-            session.sessionLogger.note("*IDN? の生応答: ${identity.raw}")
-
-            val capabilities = session.client.detectCapabilities { progress ->
-                session.sessionLogger.note("機能検出: ${progress.step} ${progress.detail ?: ""}")
-            }
+        // 経路の検証結果を残す。モバイル回線へ出ていた場合、
+        // ここを見れば後から分かる。
+        session.client.routeInfo.value?.let { route ->
             session.sessionLogger.note(
-                "検出結果: 世代=${capabilities.family} アナログ=${capabilities.analogChannelCount}ch " +
-                    "デジタル=${capabilities.digitalChannelCount}ch 検出方法=${capabilities.detectionSource} " +
-                    "不明=${capabilities.undeterminedFeatures.joinToString().ifEmpty { "なし" }}",
+                "経路: local=${route.localAddress} -> remote=${route.remoteAddress}:${route.remotePort} " +
+                    "bindStrategy=${route.requestedBindStrategy} Ethernet経由=${route.boundToEthernet}",
             )
-            addSavedDevice(config)
+            route.warning?.let { session.sessionLogger.note("経路の警告: $it") }
         }
+
+        val identity = session.client.identify()
+        // *IDN? の生応答は機種の特定に直結する。必ず残す。
+        session.sessionLogger.note("*IDN? の生応答: ${identity.raw}")
+
+        val capabilities = session.client.detectCapabilities { progress ->
+            session.sessionLogger.note("機能検出: ${progress.step} ${progress.detail ?: ""}")
+        }
+        session.sessionLogger.note(
+            "検出結果: 世代=${capabilities.family} アナログ=${capabilities.analogChannelCount}ch " +
+                "デジタル=${capabilities.digitalChannelCount}ch 検出方法=${capabilities.detectionSource} " +
+                "不明=${capabilities.undeterminedFeatures.joinToString().ifEmpty { "なし" }}",
+        )
+        addSavedDevice(config)
     }
 
     /** ログの記録を開始する。接続前に押しておくと、接続のやり取りが最初から残る。 */
@@ -364,7 +372,7 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
 
         if (state.hostInput.isNotBlank() && !state.hostError) {
             // 前回の接続先が記憶されている — 直接接続
-            connect()
+            connectWithAutoStrategy()
         } else {
             // 接続先不明 — 探索して最初に見つかった Tektronix 機器へ接続
             startDiscovery()
@@ -376,12 +384,52 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
                     if (found != null) {
                         selectDiscovered(found)
                         kotlinx.coroutines.delay(200)
-                        if (!_uiState.value.connectionState.isConnected) connect()
+                        if (!_uiState.value.connectionState.isConnected) connectWithAutoStrategy()
                         return@launch
                     }
                     if (!current.discovering) return@launch
                 }
             }
+        }
+    }
+
+    /**
+     * 自動接続用のバインド方式選択。
+     *
+     * まず有線固定（[SocketBindStrategy.ETHERNET_INTERFACE_ADDRESS]）で「確実に eth0 から出す」
+     * 経路を試し、使えない環境（有線 I/F が無い等）では [SocketBindStrategy.SYSTEM_DEFAULT] へ
+     * 自動フォールバックする。これにより、テザリング扱いで Ethernet が未登録の PDT-FP1 でも
+     * 可能な限り有線側を強制しつつ、失敗しても接続自体は成立させる。
+     *
+     * 手動の [connect] はユーザーが明示的に選んだ方式を尊重し、勝手に切り替えない。
+     */
+    private fun connectWithAutoStrategy() {
+        val base = currentConfig()
+        val strategies = listOf(
+            SocketBindStrategy.ETHERNET_INTERFACE_ADDRESS,
+            SocketBindStrategy.SYSTEM_DEFAULT,
+        )
+        launchBusy("接続中") {
+            var lastError: ScpiException? = null
+            for ((index, strategy) in strategies.withIndex()) {
+                val config = base.copy(bindStrategy = strategy)
+                try {
+                    if (index > 0) {
+                        session.sessionLogger.note(
+                            "バインド方式 ${strategies[index - 1]} で接続できなかったため $strategy で再試行します。",
+                        )
+                    }
+                    session.rememberConfig(config)
+                    _uiState.value = _uiState.value.copy(bindStrategy = strategy)
+                    runConnectSequence(config)
+                    return@launchBusy
+                } catch (exception: ScpiException) {
+                    lastError = exception
+                    runCatching { session.client.disconnect() }
+                }
+            }
+            // すべて失敗した場合は最後の失敗理由を見せる。
+            lastError?.let { throw it }
         }
     }
 
