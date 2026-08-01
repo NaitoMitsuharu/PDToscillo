@@ -197,8 +197,8 @@ class ConnectionDiagnostics(private val monitor: EthernetNetworkMonitor?, privat
             "Android は Ethernet として報告していませんが、" +
                 "それらしいインターフェースがあります: " +
                 status.systemInterfaces.filter { it.looksLikeEthernet }.joinToString { it.name },
-            "バインド方式を「システム既定」にして接続を試してください。" +
-                "その場合はモバイル回線へ出ていないか経路検証の結果を確認してください。",
+            "バインド方式「有線を固定」で接続できます（eth0 の IP をソースアドレスに固定します）。" +
+                "自動接続もこの方式を使います。",
         )
 
         else -> DiagnosticStep(

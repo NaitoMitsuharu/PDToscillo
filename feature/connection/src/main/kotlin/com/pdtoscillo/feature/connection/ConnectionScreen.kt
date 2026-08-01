@@ -476,13 +476,13 @@ private fun EthernetInfoSection(state: ConnectionUiState) {
             status.activeTransports.joinToString { it.name }.ifEmpty { "不明" },
         )
         if (status.hasCellular) {
-            UnavailableNotice("モバイル通信が有効です。テザリングモードでは「システム既定」を使ってください。")
+            UnavailableNotice("モバイル通信が有効です。テザリングモードでは「有線を固定」を使うと確実に有線側へ接続できます。")
         }
         if (status.hasEthernetLikeInterfaceOnly) {
             UnavailableNotice(
                 "Android は Ethernet として報告していませんが、${
                     status.systemInterfaces.filter { it.looksLikeEthernet }.joinToString { it.name }
-                } が見つかっています。バインド方式を「システム既定」にして接続を試してください。",
+                } が見つかっています。バインド方式「有線を固定」で接続できます（自動接続もこれを使います）。",
             )
         }
     }

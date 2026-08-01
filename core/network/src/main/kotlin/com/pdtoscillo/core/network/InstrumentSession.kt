@@ -3,6 +3,7 @@ package com.pdtoscillo.core.network
 import android.content.Context
 import com.pdtoscillo.core.common.CommunicationLogRecorder
 import com.pdtoscillo.core.model.ConnectionConfig
+import com.pdtoscillo.core.model.LineTerminator
 import com.pdtoscillo.core.model.SocketBindStrategy
 import com.pdtoscillo.core.scpi.ScpiClient
 import com.pdtoscillo.core.scpi.Tektronix4000Driver
@@ -19,6 +20,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * 画面回転や画面遷移で作り直さないこと。`Application` が保持する。
  */
 class InstrumentSession(context: Context) {
+
+    /** 前回の接続先を再起動後も覚えておくための保存先。自動接続を即座に行うために使う。 */
+    private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     val networkMonitor: EthernetNetworkMonitor = EthernetNetworkMonitor(context)
 
@@ -47,9 +51,7 @@ class InstrumentSession(context: Context) {
 
     val networkStatus: StateFlow<NetworkStatus> = networkMonitor.status
 
-    private val _lastConfig = MutableStateFlow(
-        ConnectionConfig(host = "", port = ConnectionConfig.DEFAULT_PORT),
-    )
+    private val _lastConfig = MutableStateFlow(loadLastConfig())
 
     /** 直近に使った接続設定。再接続と診断の既定値に使う。 */
     val lastConfig: StateFlow<ConnectionConfig> = _lastConfig.asStateFlow()
@@ -62,8 +64,30 @@ class InstrumentSession(context: Context) {
         networkMonitor.stop()
     }
 
+    /**
+     * 接続設定を覚える。再起動後の自動接続に使うため端末へも保存する。
+     *
+     * ホストが空の設定（未入力）は保存しない。誤って空で上書きしないため。
+     */
     fun rememberConfig(config: ConnectionConfig) {
         _lastConfig.value = config
+        if (config.host.isBlank()) return
+        prefs.edit()
+            .putString(KEY_HOST, config.host)
+            .putInt(KEY_PORT, config.port)
+            .putString(KEY_BIND, config.bindStrategy.name)
+            .putString(KEY_TERMINATOR, config.terminator.name)
+            .apply()
+    }
+
+    private fun loadLastConfig(): ConnectionConfig {
+        val host = prefs.getString(KEY_HOST, "").orEmpty()
+        val port = prefs.getInt(KEY_PORT, ConnectionConfig.DEFAULT_PORT)
+        val bind = runCatching { SocketBindStrategy.valueOf(prefs.getString(KEY_BIND, "").orEmpty()) }
+            .getOrDefault(SocketBindStrategy.ETHERNET_INTERFACE_ADDRESS)
+        val terminator = runCatching { LineTerminator.valueOf(prefs.getString(KEY_TERMINATOR, "").orEmpty()) }
+            .getOrDefault(LineTerminator.LF)
+        return ConnectionConfig(host = host, port = port, bindStrategy = bind, terminator = terminator)
     }
 
     /**
@@ -73,4 +97,12 @@ class InstrumentSession(context: Context) {
      * 黙って作らないため、切り替えは利用者の明示的な選択に委ねる。
      */
     fun withSystemDefaultBinding(config: ConnectionConfig): ConnectionConfig = config.copy(bindStrategy = SocketBindStrategy.SYSTEM_DEFAULT)
+
+    private companion object {
+        const val PREFS_NAME = "pdtoscillo_session"
+        const val KEY_HOST = "last_host"
+        const val KEY_PORT = "last_port"
+        const val KEY_BIND = "last_bind_strategy"
+        const val KEY_TERMINATOR = "last_terminator"
+    }
 }

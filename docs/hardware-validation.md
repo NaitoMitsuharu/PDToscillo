@@ -5,6 +5,53 @@
 
 ---
 
+## 確認済み: PDT-FP1 実機 + 疑似サーバー（2026-08-01）
+
+オシロスコープ（DPO4034）は手元に無いが、**PDT-FP1 実機は手元にある**状態で、
+疑似サーバーを DPO4034 の代役にして「ネットワーク/バインド層とアプリ動作」を実機検証した。
+
+構成:
+
+```text
+PC(開発機) ── USB(Type-C, adb) ── PDT-FP1 実機
+PC(開発機) ── LAN ケーブル ──── PDT-FP1 実機（イーサネットテザリング）
+PC 上で疑似サーバーを DPO4034 として起動: :simulator:run --bind 0.0.0.0 --model DPO4034
+アプリは PDT-FP1 →(eth0)→ PC:4000 の疑似サーバーへ接続
+```
+
+このとき **モバイルデータ ON・Wi-Fi ON**（多経路同時）を再現。
+
+### 実機で確定した事実
+
+- **eth0 はイーサネットテザリング**（`dumpsys tethering` に `TETHERING_ETHERNET` /
+  `state=TETHERED` / `10.52.125.152/24` を確認）。`ConnectivityManager` に
+  `TRANSPORT_ETHERNET` として現れないため `socketFactory` / `bindSocket` は使えない。
+  → 設計前提がシステムログで裏付けられた。
+- **アプリの `NetworkInterface` 列挙は eth0 を取得できる**（Android 15）。
+  セッションログに `eth0 ... ethernetらしい=true addr=... 10.52.125.152/24` を記録。
+- **「有線を固定」(ETHERNET_INTERFACE_ADDRESS) が実機で機能する。**
+  PC 側 `Get-NetTCPConnection` で、4000 番への接続の **接続元が 10.52.125.152 (eth0)**
+  であることを確認。モバイル・Wi-Fi 同時 ON でも eth0 から出た（誤ルーティングなし）。
+- **接続 → `*IDN?` → 機能検出（Gen1 のモデル名フォールバック）** が動作。
+  疑似 DPO4034 は `CONFIGuration:ANALOg:NUMCHANnels?` に無応答 → アプリは `EVMsg?` で
+  `113,"Undefined header"` を検出 → モデル名から アナログ4/デジタル0 を判定。
+- **概要・波形画面が実機で動作**。波形はバイナリブロック（`CURVe?`）転送→デコード→
+  間引き→Compose 描画まで動作（10000 点、257 KiB/s、約 1.0 Hz）。
+- **LAN 自動接続が動作**。前回接続先を端末に永続化し、アプリ再起動後に手動操作ゼロで
+  eth0 から自動接続。手動「切断」後は自動再接続しない（挿し直しで再開）。
+- Android バージョンは **Android 15 (API 35)**（旧ドキュメントの 14 想定を訂正）。
+
+### これでも確認できていない（オシロ実機が要る）
+
+- 本物の DPO4034 の `*IDN?` 生文字列、Gen1 実機での `CONFIGuration:*?` の実際の可否
+- 実信号の波形データ・電圧スケーリングの正しさ、Socket Server always-on の実挙動
+- 実機オシロ相手の実効スループット（上記 257 KiB/s は疑似サーバー相手の値）
+
+> 要するに **「PDT-FP1 上でのアプリの通信・経路・バインド・UI」は実機確認済み**。
+> 残るのは DPO4034 固有の SCPI 挙動のみ。
+
+---
+
 ## 確認済み実機: Tektronix DPO4034
 
 接続日: 2026-07-31

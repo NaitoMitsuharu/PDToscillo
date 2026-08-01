@@ -20,6 +20,7 @@ import com.pdtoscillo.core.network.InstrumentSession
 import com.pdtoscillo.core.network.NetworkStatus
 import com.pdtoscillo.core.network.SessionLogState
 import com.pdtoscillo.core.scpi.ScpiException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +28,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** 接続画面の状態。 */
 data class ConnectionUiState(
@@ -95,6 +98,9 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
 
     private var discoveryJob: Job? = null
 
+    /** 手動で切断した後は LAN ウォッチャーが自動接続しないようにする抑止フラグ。 */
+    private var autoConnectSuppressed = false
+
     init {
         session.start()
 
@@ -137,6 +143,51 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
                 terminator = remembered.terminator,
                 autoReconnect = remembered.autoReconnect,
             )
+        }
+
+        startLanWatcher()
+    }
+
+    /**
+     * LAN の接続を監視して自動で接続まで進める。
+     *
+     * PDT-FP1 の LAN 端子はイーサネットテザリング扱いになり `TRANSPORT_ETHERNET` として
+     * 登録されないため、`ConnectivityManager` のコールバックでは検出できない。そこで
+     * `NetworkInterface` 列挙（`ethernetLikeLocalAddresses`）を定期的に読み直し、eth0 の
+     * IP が現れたら（＝LAN ケーブルを挿したら）自動で接続を試みる。
+     *
+     * - 立ち上がり（none→present）で必ず 1 回試す。挿し直しでも再度試す。
+     * - 有線が生きているのに未接続の間は、一定間隔で再試行する（機器の起動待ち等）。
+     * - **手動で切断した後は自動接続しない**（[disconnect] で抑止フラグを立てる）。
+     *   ケーブルを挿し直すと抑止は解除される。
+     */
+    private fun startLanWatcher() {
+        viewModelScope.launch {
+            var lanWasReady = false
+            var lastAttemptAtMillis = 0L
+            while (isActive) {
+                // NetworkInterface 列挙は同期 I/O なので IO ディスパッチャで行う。
+                val ready = withContext(Dispatchers.IO) {
+                    session.networkMonitor.refresh()
+                    session.networkMonitor.ethernetLikeLocalAddresses().isNotEmpty()
+                }
+
+                val risingEdge = ready && !lanWasReady
+                if (risingEdge) autoConnectSuppressed = false // 挿し直したら自動接続を再び許可する
+
+                val st = _uiState.value
+                val idle = !st.connectionState.isConnected && !st.busy && !st.discovering
+                val now = System.currentTimeMillis()
+                if (ready && idle && !autoConnectSuppressed) {
+                    if (risingEdge || now - lastAttemptAtMillis > AUTO_CONNECT_RETRY_MILLIS) {
+                        lastAttemptAtMillis = now
+                        triggerAutoConnect()
+                    }
+                }
+
+                lanWasReady = ready
+                kotlinx.coroutines.delay(LAN_WATCH_INTERVAL_MILLIS)
+            }
         }
     }
 
@@ -187,6 +238,8 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
     }
 
     fun connect() {
+        // 手動で接続するなら、以降の LAN 立ち上がりでの自動接続も許可しておく。
+        autoConnectSuppressed = false
         val state = _uiState.value
         if (!state.canConnect) return
         if (state.transportType == TransportType.VXI11) {
@@ -243,6 +296,26 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
     /** ログの記録を開始する。接続前に押しておくと、接続のやり取りが最初から残る。 */
     fun startLogging() {
         session.sessionLogger.start(currentConfig())
+
+        // 既に接続済みで記録を始めた場合（自動接続が先に済んだ等）、経路検証・識別・機能検出の
+        // 結果は記録開始前に流れている。現在値をスナップショットとして書き残す。
+        if (_uiState.value.connectionState.isConnected) {
+            session.sessionLogger.section("記録開始時点の状態（自動接続で先に接続済み）")
+            session.client.routeInfo.value?.let { route ->
+                session.sessionLogger.note(
+                    "経路(現在値): local=${route.localAddress} -> remote=${route.remoteAddress}:${route.remotePort} " +
+                        "bindStrategy=${route.requestedBindStrategy} Ethernet経由=${route.boundToEthernet}",
+                )
+                route.warning?.let { session.sessionLogger.note("経路の警告: $it") }
+            }
+            session.client.identity.value?.let { session.sessionLogger.note("*IDN?(現在値): ${it.raw}") }
+            session.client.capabilities.value?.let { cap ->
+                session.sessionLogger.note(
+                    "機能(現在値): 世代=${cap.family} アナログ=${cap.analogChannelCount}ch " +
+                        "デジタル=${cap.digitalChannelCount}ch 検出方法=${cap.detectionSource}",
+                )
+            }
+        }
     }
 
     fun stopLogging() {
@@ -250,6 +323,9 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
     }
 
     fun disconnect() {
+        // 手動切断の意図を尊重する。LAN が生きたままでも自動再接続しない。
+        // ケーブルを挿し直せば（LAN の立ち上がりで）抑止は解除される。
+        autoConnectSuppressed = true
         launchBusy("切断中") { session.client.disconnect() }
     }
 
@@ -473,6 +549,12 @@ class ConnectionViewModel(private val session: InstrumentSession) : ViewModel() 
         private const val MAX_SAVED_DEVICES = 10
         private const val MAX_AUTO_CONNECT_POLLS = 60
         private const val AUTO_CONNECT_POLL_MILLIS = 500L
+
+        /** LAN の状態を見に行く間隔。テザリングはコールバックが来ないので定期的に確認する。 */
+        private const val LAN_WATCH_INTERVAL_MILLIS = 3_000L
+
+        /** 有線が生きているのに未接続のときの自動接続の再試行間隔。 */
+        private const val AUTO_CONNECT_RETRY_MILLIS = 15_000L
 
         fun factory(session: InstrumentSession): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

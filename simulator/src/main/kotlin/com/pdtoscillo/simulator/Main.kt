@@ -46,6 +46,11 @@ private fun parseArgs(args: Array<String>): SimulatorConfig? {
                 config = config.copy(port = value)
             }
 
+            "--bind" -> {
+                val value = args.getOrNull(++index) ?: return null
+                config = config.copy(bindAddress = value)
+            }
+
             "--model" -> {
                 val name = args.getOrNull(++index) ?: return null
                 val model = SimulatedModel.fromName(name) ?: run {
@@ -91,6 +96,7 @@ private fun printUsage() {
         使い方: simulator [オプション]
 
           --port <番号>     待受ポート (既定 ${SimulatorConfig.DEFAULT_PORT}、0 で自動割当)
+          --bind <アドレス> 待受アドレス (既定 ${SimulatorConfig.DEFAULT_BIND_ADDRESS}、LAN 越しは 0.0.0.0)
           --model <名前>    ${SimulatedModel.entries.joinToString { it.idnModel }}
           --fault <モード>  ${FaultMode.entries.joinToString { it.name }}
           --shape <形状>    ${WaveformShape.entries.joinToString { it.name }}

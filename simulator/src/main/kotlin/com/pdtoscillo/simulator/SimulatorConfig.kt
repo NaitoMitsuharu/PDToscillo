@@ -8,6 +8,11 @@ package com.pdtoscillo.simulator
  */
 data class SimulatorConfig(
     val port: Int = DEFAULT_PORT,
+    /**
+     * 待受アドレス。既定は loopback（テストと、うっかり外部公開しないための安全側）。
+     * 実機の PDT-FP1 から LAN 越しに接続する検証では `0.0.0.0` を指定して全 I/F で待ち受ける。
+     */
+    val bindAddress: String = DEFAULT_BIND_ADDRESS,
     /** `*IDN?` で返すモデル。世代ごとの挙動差を再現するために使う。 */
     val model: SimulatedModel = SimulatedModel.MDO4104C,
     val faultMode: FaultMode = FaultMode.NONE,
@@ -25,6 +30,7 @@ data class SimulatorConfig(
 ) {
     companion object {
         const val DEFAULT_PORT: Int = 4000
+        const val DEFAULT_BIND_ADDRESS: String = "127.0.0.1"
         const val DEFAULT_CHUNK_SIZE: Int = 7
         const val DEFAULT_CHUNK_DELAY_MILLIS: Long = 5
         const val DEFAULT_RESPONSE_DELAY_MILLIS: Long = 2_000

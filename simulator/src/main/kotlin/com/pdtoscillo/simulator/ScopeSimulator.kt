@@ -40,9 +40,12 @@ class ScopeSimulator(private val config: SimulatorConfig = SimulatorConfig()) : 
         check(running.compareAndSet(false, true)) { "already started" }
         val socket = ServerSocket()
         socket.reuseAddress = true
-        socket.bind(InetSocketAddress("127.0.0.1", config.port))
+        socket.bind(InetSocketAddress(config.bindAddress, config.port))
         serverSocket = socket
-        log("listening on port ${socket.localPort} model=${config.model.idnModel} fault=${config.faultMode}")
+        log(
+            "listening on ${config.bindAddress}:${socket.localPort} " +
+                "model=${config.model.idnModel} fault=${config.faultMode}",
+        )
 
         executor.execute {
             while (running.get()) {
