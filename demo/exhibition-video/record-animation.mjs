@@ -9,7 +9,7 @@ import { spawn } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const root = dirname(new URL(import.meta.url).pathname.replace(/^\/(.:)/, '$1'));
-const fps = 12, duration = 60;
+const fps = Number(process.env.PDTOSCILLO_CAPTURE_FPS || 60), duration = 60;
 const variants = process.env.PDTOSCILLO_VARIANTS?.split(',') || ['product-pv', 'explainer', 'technical-demo'];
 const defaultFfmpeg = join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg.Essentials_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-8.1.1-essentials_build', 'bin', 'ffmpeg.exe');
 const ffmpeg = process.env.FFMPEG_PATH || defaultFfmpeg;
@@ -44,12 +44,11 @@ try {
         await page.screenshot({ path: join(frames, `frame-${String(frame).padStart(4, '0')}.png`) });
       }
       const output = join(root, `PDToscillo-${variant}.mp4`);
-      await run(ffmpeg, ['-y', '-framerate', String(fps), '-i', join(frames, 'frame-%04d.png'), '-vf', 'fps=30,scale=1920:1080:flags=lanczos', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output]);
-      await run(ffmpeg, ['-y', '-ss', '00:00:54', '-i', output, '-frames:v', '1', join(root, 'assets', `${variant}-thumbnail.png`)]);
+      await run(ffmpeg, ['-y', '-framerate', String(fps), '-i', join(frames, 'frame-%04d.png'), '-vf', 'fps=60,scale=1920:1080:flags=lanczos', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output]);
+      await run(ffmpeg, ['-y', '-ss', '00:00:58', '-i', output, '-frames:v', '1', '-update', '1', join(root, 'assets', `${variant}-thumbnail.png`)]);
       console.log(output);
       await page.close();
     } finally { rmSync(frames, { recursive: true, force: true }); }
   }
-  await run(ffmpeg, ['-y', '-ss', '00:00:36', '-i', join(root, 'PDToscillo-product-pv.mp4'), '-vf', 'crop=1080:1080:840:0', '-frames:v', '1', join(root, 'assets', 'project-thumbnail.png')]);
   await browser.close();
 } finally { server.close(); }

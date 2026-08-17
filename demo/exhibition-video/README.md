@@ -8,7 +8,7 @@
 - `PDToscillo-explainer.mp4` — 図解と文字の読みやすさを優先した展示向け解説
 - `PDToscillo-technical-demo.mp4` — プロトコルとデータフローを強調した技術デモ
 
-各動画は1920×1080、H.264、60秒、無音です。対応する16:9サムネイルは `assets/*-thumbnail.png`、共通の正方形プロジェクトサムネイルは `assets/project-thumbnail.png` です。
+各動画は1920×1080、60fps、H.264、60秒、無音です。対応する16:9動画サムネイルは `assets/*-thumbnail.png`、動画とは独立した16:9プロジェクトサムネイルは `assets/project-thumbnail.png` です。
 
 ## 再生とテーマ切替
 
@@ -46,6 +46,12 @@ node .\record-animation.mjs
 ```
 
 3テーマをフレームキャプチャしてMP4と動画別サムネイルを生成します。
+
+プロジェクトサムネイルは動画フレームや生成画像を使わず、専用のHTML・CSS・インラインSVGから別途生成します。
+
+```powershell
+node .\render-project-thumbnail.mjs
+```
 
 個別に再生成する場合は、テーマ名を指定します。
 

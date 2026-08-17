@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PDToscillo Project Thumbnail</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #030a12; }
+    body { font-family: "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", sans-serif; }
+    .frame { position: relative; width: 1920px; height: 1080px; overflow: hidden; color: #f2fbff; background: radial-gradient(circle at 67% 48%, #0b2b3d 0, #061521 34%, #030a12 70%); }
+    .frame::before { content: ""; position: absolute; inset: 0; opacity: .19; background-image: linear-gradient(rgba(85,232,220,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(85,232,220,.18) 1px, transparent 1px); background-size: 54px 54px; mask-image: linear-gradient(90deg,transparent 0,#000 40%,#000 100%); }
+    .copy { position: absolute; z-index: 5; left: 82px; top: 70px; width: 790px; }
+    .eyebrow { display: flex; align-items: center; gap: 15px; color: #62eddf; font: 800 21px/1 Consolas, monospace; letter-spacing: .17em; }
+    .eyebrow::before { content: ""; width: 52px; height: 4px; border-radius: 3px; background: #62eddf; box-shadow: 0 0 18px #62eddf; }
+    h1 { margin: 28px 0 15px; font-size: 72px; line-height: 1.1; letter-spacing: -.045em; text-shadow: 0 4px 24px #000; }
+    .lead { margin: 0; color: #bcd1dc; font-size: 27px; line-height: 1.55; font-weight: 700; }
+    .chips { display: flex; gap: 12px; margin-top: 25px; }
+    .chip { padding: 11px 17px; border: 1px solid rgba(98,237,223,.65); border-radius: 999px; background: rgba(7,29,41,.82); color: #dffffa; font: 800 15px/1 Consolas, monospace; letter-spacing: .06em; }
+    .vision { position: absolute; z-index: 6; right: 66px; top: 52px; padding: 11px 20px; border: 2px solid #62eddf; border-radius: 999px; color: #dffffa; background: rgba(3,16,27,.82); font: 800 15px/1 Consolas, monospace; letter-spacing: .13em; }
+    .art { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; }
+    .signal { position: absolute; z-index: 5; left: 82px; bottom: 42px; width: 1756px; height: 3px; border-radius: 2px; background: linear-gradient(90deg,#62eddf 0 29%,rgba(98,237,223,.12) 29% 100%); }
+  </style>
+</head>
+<body>
+  <main class="frame" aria-label="PDToscilloプロジェクトのHTML・CSSキービジュアル">
+    <section class="copy">
+      <div class="eyebrow">PDTOSCILLO</div>
+      <h1>LANを挿す。<br>機器がわかる。</h1>
+      <p class="lead">計測・音響・映像を、自動識別と最適UIでひとつにつなぐ。</p>
+      <div class="chips"><span class="chip">AUTO IDENTIFY</span><span class="chip">ADAPTIVE UI</span><span class="chip">EDGE AI + CLOUD</span></div>
+    </section>
+    <div class="vision">PROJECT VISION</div>
+
+    <svg class="art" viewBox="0 0 1920 1080" role="img" aria-label="複数機器をLAN接続しPDT-FP1で表示・解析する構成図">
+      <defs>
+        <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#102a3a"/><stop offset="1" stop-color="#07131d"/></linearGradient>
+        <linearGradient id="phone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#34383d"/><stop offset=".42" stop-color="#111418"/><stop offset="1" stop-color="#030507"/></linearGradient>
+        <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0c2432"/><stop offset="1" stop-color="#02070b"/></linearGradient>
+        <linearGradient id="cyanline" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2b8f9a"/><stop offset=".45" stop-color="#62eddf"/><stop offset="1" stop-color="#dffffa"/></linearGradient>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#000" flood-opacity=".62"/></filter>
+        <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <pattern id="screenGrid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#204457" stroke-width="1"/></pattern>
+      </defs>
+
+      <ellipse cx="1265" cy="976" rx="430" ry="48" fill="#000" opacity=".48"/>
+      <text x="84" y="610" fill="#62eddf" font-family="Consolas,monospace" font-size="15" font-weight="800" letter-spacing="3">01 / CONNECTED DEVICES</text>
+      <text x="1050" y="132" fill="#62eddf" font-family="Consolas,monospace" font-size="15" font-weight="800" letter-spacing="3">02 / AUTO UI</text>
+      <text x="1528" y="178" fill="#62eddf" font-family="Consolas,monospace" font-size="15" font-weight="800" letter-spacing="3">03 / INTELLIGENCE</text>
+
+      <g filter="url(#shadow)">
+        <g transform="translate(82 642) rotate(-2 108 122)">
+          <rect width="216" height="246" rx="22" fill="url(#panel)" stroke="#315669" stroke-width="3"/>
+          <text x="20" y="34" fill="#62eddf" font-family="Consolas,monospace" font-size="13" font-weight="800">TENSION</text>
+          <path d="M30 99L48 73H104L128 52H171L191 79V110H23Z" fill="#285d78" stroke="#7aa9bc" stroke-width="3"/><circle cx="68" cy="112" r="19" fill="#061019" stroke="#78909b" stroke-width="6"/><circle cx="162" cy="112" r="19" fill="#061019" stroke="#78909b" stroke-width="6"/>
+          <rect x="25" y="149" width="166" height="67" rx="10" fill="#0a1d28"/><path d="M42 192C59 168 75 206 93 176S125 202 144 171S171 197 180 176" fill="none" stroke="#ffb45d" stroke-width="5"/>
+          <circle cx="204" cy="213" r="7" fill="#62eddf"/>
+        </g>
+        <g transform="translate(316 630) rotate(1 108 122)">
+          <rect width="216" height="246" rx="22" fill="url(#panel)" stroke="#315669" stroke-width="3"/>
+          <text x="20" y="34" fill="#62eddf" font-family="Consolas,monospace" font-size="13" font-weight="800">LXI / SCPI</text>
+          <rect x="22" y="55" width="132" height="111" rx="8" fill="#061019" stroke="#506b78" stroke-width="3"/><rect x="31" y="64" width="114" height="93" fill="url(#screenGrid)"/><path d="M34 128C52 78 68 149 86 96S117 142 143 82" fill="none" stroke="#62eddf" stroke-width="5" filter="url(#glow)"/>
+          <g fill="#94a5ad" stroke="#4e6874" stroke-width="4"><circle cx="182" cy="78" r="14"/><circle cx="182" cy="119" r="14"/></g><path d="M192 52L150 106" stroke="#ffb45d" stroke-width="6" stroke-linecap="round"/><circle cx="150" cy="106" r="7" fill="#fff0d6"/>
+          <rect x="23" y="188" width="167" height="30" rx="7" fill="#102f3e"/><path d="M36 203H177" stroke="#4f7080" stroke-width="5" stroke-dasharray="12 8"/><circle cx="204" cy="213" r="7" fill="#62eddf"/>
+        </g>
+        <g transform="translate(550 642) rotate(-1 108 122)">
+          <rect width="216" height="246" rx="22" fill="url(#panel)" stroke="#315669" stroke-width="3"/>
+          <text x="20" y="34" fill="#62eddf" font-family="Consolas,monospace" font-size="13" font-weight="800">DANTE / AES67</text>
+          <rect x="19" y="53" width="178" height="162" rx="13" fill="#070d13" stroke="#405764" stroke-width="3"/>
+          <g transform="translate(60 122)"><circle r="38" fill="#152531" stroke="#62eddf" stroke-width="5"/><circle r="22" fill="#071017"/><path d="M0-30V-17M21-21L12-12M30 0H17M21 21L12 12M0 30V17M-21 21L-12 12M-30 0H-17M-21-21L-12-12" stroke="#9af8ef" stroke-width="3"/></g>
+          <g transform="translate(156 122)"><circle r="38" fill="#211a2c" stroke="#b785ff" stroke-width="5"/><circle r="22" fill="#071017"/><path d="M0-30V-17M21-21L12-12M30 0H17M21 21L12 12M0 30V17M-21 21L-12 12M-30 0H-17M-21-21L-12-12" stroke="#d7baff" stroke-width="3"/></g>
+          <path d="M82 187H137" stroke="#526b77" stroke-width="7" stroke-linecap="round"/><rect x="101" y="178" width="20" height="18" rx="4" fill="#f2fbff"/><circle cx="204" cy="213" r="7" fill="#62eddf"/>
+        </g>
+        <g transform="translate(784 630) rotate(2 108 122)">
+          <rect width="216" height="246" rx="22" fill="url(#panel)" stroke="#315669" stroke-width="3"/>
+          <text x="20" y="34" fill="#62eddf" font-family="Consolas,monospace" font-size="13" font-weight="800">GIGE VISION</text>
+          <rect x="20" y="53" width="176" height="113" rx="9" fill="#163a4e"/><circle cx="166" cy="79" r="18" fill="#ffb45d"/><path d="M20 166L61 104L91 139L125 87L162 132L196 104V166Z" fill="#255f78"/><path d="M20 166L72 128L111 158L151 125L196 153V166Z" fill="#113447"/><path d="M73 87Q82 76 91 87Q100 76 109 87" fill="none" stroke="#f2fbff" stroke-width="4" stroke-linecap="round"/>
+          <g transform="translate(34 181)"><rect width="72" height="39" rx="6" fill="#1b303b" stroke="#718995" stroke-width="3"/><circle cx="22" cy="20" r="10" fill="#071119" stroke="#62eddf" stroke-width="3"/><path d="M72 10H99L113 16V27L99 33H72Z" fill="#13232c" stroke="#718995" stroke-width="3"/></g><circle cx="204" cy="213" r="7" fill="#62eddf"/>
+        </g>
+      </g>
+
+      <g fill="none" stroke="url(#cyanline)" stroke-width="7" stroke-linecap="round" filter="url(#glow)" opacity=".9">
+        <path d="M286 855C490 980 772 976 1018 768"/><path d="M520 843C668 940 842 916 1018 768"/><path d="M754 855C858 900 944 862 1018 768"/><path d="M988 843C1025 831 1042 799 1018 768"/>
+      </g>
+      <g fill="#dffffa" filter="url(#glow)"><circle cx="486" cy="929" r="8"/><circle cx="700" cy="934" r="7"/><circle cx="850" cy="884" r="9"/><circle cx="952" cy="812" r="7"/></g>
+      <g transform="translate(1018 768)" filter="url(#shadow)"><circle r="67" fill="#0a2230" stroke="#62eddf" stroke-width="4"/><circle r="49" fill="none" stroke="#2c6170" stroke-width="3" stroke-dasharray="9 8"/><rect x="-25" y="-19" width="50" height="38" rx="6" fill="#123744" stroke="#62eddf" stroke-width="3"/><path d="M-15 20V33M-5 20V33M5 20V33M15 20V33M-36-4H-25M25-4H36" stroke="#62eddf" stroke-width="4"/><text x="0" y="92" text-anchor="middle" fill="#bfe1e5" font-family="Consolas,monospace" font-size="12" font-weight="800">AUTO DETECT</text></g>
+
+      <g transform="translate(1118 178)" filter="url(#shadow)">
+        <path d="M49 10H310Q338 10 347 41L358 98V681L344 730Q337 759 307 765H54Q20 759 13 727L4 674V93L18 41Q26 10 49 10Z" fill="#030507" stroke="#484d51" stroke-width="5"/>
+        <path d="M309 25L348 53V710L321 751L310 715Z" fill="#11161a"/><g stroke="#565c60" stroke-width="3"><path d="M327 110V330"/><path d="M334 112V333"/><path d="M341 115V336"/></g>
+        <path d="M37 0H302Q329 0 337 30L345 87V678L333 727Q326 751 300 751H40Q14 751 8 724L0 673V92L11 31Q17 0 37 0Z" fill="url(#phone)" stroke="#666b6f" stroke-width="4"/>
+        <rect x="29" y="61" width="286" height="612" rx="12" fill="url(#screen)" stroke="#43494d" stroke-width="4"/>
+        <path d="M136 28H216" stroke="#74797d" stroke-width="7" stroke-linecap="round"/><circle cx="239" cy="28" r="6" fill="#161b1e" stroke="#50565a" stroke-width="2"/>
+        <path d="M320 104L344 115V337L320 327Z" fill="#0b0f12" stroke="#4f5559" stroke-width="2"/><path d="M325 120V309M332 123V312M339 126V315" stroke="#5b6165" stroke-width="3"/>
+        <text x="54" y="103" fill="#f2fbff" font-size="25" font-weight="800">PDToscillo</text><text x="54" y="132" fill="#62eddf" font-family="Consolas,monospace" font-size="12" font-weight="800">LAN / DEVICE IDENTIFIED</text>
+        <g transform="translate(51 160)"><rect width="242" height="218" rx="12" fill="#0b2230"/><rect x="12" y="12" width="218" height="194" fill="url(#screenGrid)"/><path d="M18 146C47 68 67 180 99 94S151 169 181 81S215 137 225 101" fill="none" stroke="#62eddf" stroke-width="7" filter="url(#glow)"/><path d="M18 174C52 156 76 192 111 164S173 190 225 153" fill="none" stroke="#ffb45d" stroke-width="3"/></g>
+        <g transform="translate(52 407)"><rect width="112" height="83" rx="11" fill="#102d3d"/><text x="14" y="26" fill="#86a6b5" font-size="12">LIVE VALUE</text><text x="14" y="62" fill="#f2fbff" font-size="30" font-weight="800">24.83</text><text x="88" y="62" fill="#62eddf" font-size="13">kN</text><rect x="128" width="112" height="83" rx="11" fill="#102d3d"/><text x="142" y="26" fill="#86a6b5" font-size="12">STATUS</text><text x="142" y="61" fill="#dffffa" font-size="19" font-weight="800">LIVE</text><circle cx="218" cy="53" r="9" fill="#62eddf" filter="url(#glow)"/></g>
+        <g transform="translate(52 512)"><rect width="240" height="53" rx="10" fill="#0d2634"/><text x="16" y="22" fill="#7f9dab" font-size="11">ADAPTIVE UI</text><text x="16" y="42" fill="#e9f7fb" font-size="15" font-weight="700">GRAPH · CONTROL · RECORD</text></g>
+        <g transform="translate(52 586)"><rect width="72" height="52" rx="9" fill="#123247"/><rect x="84" width="72" height="52" rx="9" fill="#123247"/><rect x="168" width="72" height="52" rx="9" fill="#123247"/><text x="36" y="32" text-anchor="middle" fill="#bcd6df" font-size="12">VIEW</text><text x="120" y="32" text-anchor="middle" fill="#bcd6df" font-size="12">SAVE</text><text x="204" y="32" text-anchor="middle" fill="#bcd6df" font-size="12">RUN</text></g>
+        <path d="M35 751H304L293 779H49Z" fill="#080b0e" stroke="#3f4549" stroke-width="4"/>
+        <g transform="translate(51 733)"><rect width="72" height="28" rx="4" fill="#020405" stroke="#8c9296" stroke-width="3"/><path d="M12 5V21M24 5V21M36 5V21M48 5V21M60 5V21" stroke="#3d454a" stroke-width="3"/><path d="M36 28V62" stroke="#62eddf" stroke-width="10"/><path d="M12 62H60" stroke="#62eddf" stroke-width="10" stroke-linecap="round"/></g>
+        <g fill="#090b0d" stroke="#676d71" stroke-width="2"><rect x="157" y="742" width="38" height="13" rx="5"/><rect x="214" y="742" width="38" height="13" rx="5"/><path d="M269 740H315V757H269Z"/></g>
+      </g>
+      <path d="M1084 757C1114 771 1138 800 1169 929" fill="none" stroke="#62eddf" stroke-width="8" filter="url(#glow)"/><circle cx="1102" cy="769" r="9" fill="#dffffa" filter="url(#glow)"/>
+
+      <g transform="translate(1510 224)" filter="url(#shadow)">
+        <g><rect width="285" height="144" rx="17" fill="url(#panel)" stroke="#3b6a7d" stroke-width="3"/><text x="18" y="28" fill="#62eddf" font-family="Consolas,monospace" font-size="12" font-weight="800">AUTO UI / WAVEFORM</text><path d="M20 62H265M20 95H265M65 43V124M120 43V124M175 43V124M230 43V124" stroke="#214654" stroke-width="2"/><path d="M21 107C56 51 74 128 110 71S173 124 204 62S244 107 264 75" fill="none" stroke="#62eddf" stroke-width="5"/></g>
+        <g transform="translate(0 164)"><rect width="285" height="144" rx="17" fill="url(#panel)" stroke="#3b6a7d" stroke-width="3"/><text x="18" y="28" fill="#62eddf" font-family="Consolas,monospace" font-size="12" font-weight="800">AUTO UI / CONTROL</text><g fill="#62eddf"><rect x="24" y="103" width="18" height="23"/><rect x="54" y="75" width="18" height="51"/><rect x="84" y="52" width="18" height="74"/><rect x="114" y="88" width="18" height="38"/><rect x="144" y="65" width="18" height="61"/></g><path d="M190 55V119M230 55V119" stroke="#526d79" stroke-width="8"/><rect x="178" y="73" width="24" height="28" rx="5" fill="#b785ff"/><rect x="218" y="88" width="24" height="28" rx="5" fill="#ffb45d"/></g>
+      </g>
+      <g transform="translate(1565 610)" filter="url(#shadow)"><rect width="126" height="126" rx="25" fill="#0c2935" stroke="#62eddf" stroke-width="4"/><rect x="28" y="28" width="70" height="70" rx="15" fill="#123d47" stroke="#62eddf" stroke-width="3"/><path d="M20 39H28M20 63H28M20 87H28M98 39H106M98 63H106M98 87H106M39 20V28M63 20V28M87 20V28M39 98V106M63 98V106M87 98V106" stroke="#62eddf" stroke-width="4"/><circle cx="49" cy="51" r="7" fill="#dffffa"/><circle cx="79" cy="48" r="7" fill="#dffffa"/><circle cx="63" cy="78" r="7" fill="#dffffa"/><path d="M49 51L79 48L63 78Z" fill="none" stroke="#62eddf" stroke-width="3"/><text x="63" y="153" text-anchor="middle" fill="#bfe1e5" font-family="Consolas,monospace" font-size="12" font-weight="800">EDGE AI</text></g>
+      <path d="M1692 674C1730 674 1750 666 1780 650" fill="none" stroke="#62eddf" stroke-width="6" stroke-dasharray="11 9" filter="url(#glow)"/>
+      <g transform="translate(1742 574)" filter="url(#shadow)"><path d="M31 93Q2 93 2 67Q2 44 26 41Q33 9 65 9Q89 9 101 29Q112 21 129 21Q157 21 163 49Q186 51 186 72Q186 94 161 94Z" fill="#102f3d" stroke="#62eddf" stroke-width="4"/><text x="94" y="69" text-anchor="middle" fill="#dffffa" font-family="Consolas,monospace" font-size="16" font-weight="800">CLOUD</text><text x="94" y="120" text-anchor="middle" fill="#8eabb7" font-size="12">STORE · SHARE</text></g>
+      <g transform="translate(1532 814)"><rect width="318" height="96" rx="24" fill="#09212d" stroke="#315669" stroke-width="3"/><circle cx="42" cy="48" r="15" fill="#62eddf"/><path d="M36 48L41 53L50 42" fill="none" stroke="#06202a" stroke-width="4" stroke-linecap="round"/><text x="72" y="42" fill="#f2fbff" font-size="18" font-weight="800">現場で判断</text><text x="72" y="68" fill="#9db5c0" font-size="14">異常検知・記録・共有</text></g>
+    </svg>
+    <div class="signal"></div>
+  </main>
+</body>
+</html>
