@@ -13,10 +13,10 @@ Space キーで一時停止・再開、R キーで先頭へ戻ります。音声
 
 ## MP4の生成
 
-`render-video.ps1` は、サムネイルから45秒・1920×1080・無音のMP4を生成します。FFmpeg Essentialsが標準のwinget場所にある場合は、そのまま実行できます。
+`record-animation.mjs` は、Three.jsアニメーションをフレームキャプチャし、45秒・1920×1080・無音のMP4を生成します。FFmpeg EssentialsとPlaywrightが必要です。
 
 ```powershell
-.\render-video.ps1
+node .\record-animation.mjs
 ```
 
 ## サムネイル

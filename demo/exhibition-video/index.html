@@ -3,121 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDToscillo | Exhibition Demo</title>
+    <title>PDToscillo | LAN Instrument Experience</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main id="demo" class="stage-intro" aria-label="PDToscillo exhibition demo">
-      <div class="ambient a"></div><div class="ambient b"></div>
-      <section class="problem-card card" data-scene="problem">
-        <p class="eyebrow">THE CHALLENGE</p>
-        <h2>高機能な<br />オシロスコープ。</h2>
-        <p>多彩な設定と操作があるからこそ、<br />初めて触れる人には、少し難しい。</p>
-        <div class="problem-list"><span>複雑な操作系</span><span>設定項目の多さ</span><span>測定結果の記録</span></div>
-      </section>
-
-      <section class="title-card card" data-scene="intro">
-        <p class="eyebrow">OSCILLOSCOPE REMOTE CONTROL</p>
-        <h1>PDToscillo</h1>
-        <p class="lead">LAN対応の計測機器を、手元にひとつの画面で。</p>
-        <div class="title-line"><span></span><i></i><span></span></div>
-        <p class="small">Android tablet application · Exhibition prototype</p>
-      </section>
-
-      <section class="explain-card card" data-scene="connect">
-        <p class="eyebrow">01 / CONNECT</p>
-        <h2>LANでつなぎ、<br />手元から操作。</h2>
-        <p>接続された機器を自動で判別。<br />必要な表示と操作へ、迷わず進める。</p>
-      </section>
-
-      <section class="explain-card card" data-scene="discover">
-        <p class="eyebrow">02 / DISCOVER</p>
-        <h2>つないだ機器を、<br />自動で見分ける。</h2>
-        <p>オシロスコープからPDT-FP1まで。<br />LAN接続を起点に、対応を広げていく。</p>
-        <p class="future-note">※ 将来の対応構想を示す展示イメージです。</p>
-      </section>
-
-      <section class="explain-card card" data-scene="waveform">
-        <p class="eyebrow">02 / CAPTURE</p>
-        <h2>波形を取得し、<br />指先で詳しく見る。</h2>
-        <p>ズーム、カーソル、チャンネル表示。<br />細かな変化も、見逃さない。</p>
-      </section>
-
-      <section class="explain-card card" data-scene="measure">
-        <p class="eyebrow">03 / MEASURE</p>
-        <h2>測定値を、<br />その場で確認。</h2>
-        <p>周波数やP-P値を表示。<br />判断に必要な数値を、迷わず確認。</p>
-      </section>
-
-      <section class="explain-card card" data-scene="automate">
-        <p class="eyebrow">04 / AUTOMATE</p>
-        <h2>繰り返す測定を、<br />もっとスムーズに。</h2>
-        <p>取得・測定・保存を、指定回数で自動実行。</p>
-      </section>
-
-      <section class="outro-card card" data-scene="outro">
-        <p class="eyebrow">PDTOSCILLO</p>
-        <h2>つなぐ。見る。<br /><em>測る。</em></h2>
-        <p>オシロスコープ操作を、現場の手元へ。</p>
-      </section>
-
-      <div class="phone-wrap" aria-hidden="true">
-        <div class="phone">
-          <div class="camera"></div>
-          <div class="screen">
-            <div class="app-top"><span class="app-logo">P</span><strong>PDToscillo</strong><span class="demo-badge">DEMO</span></div>
-            <div class="app-screen screen-connect">
-              <p class="screen-kicker">接続</p><h3>オシロスコープを接続</h3>
-              <div class="connection-visual"><span class="tablet-icon">▣</span><i></i><span class="scope-icon">⌁</span></div>
-              <div class="status connected"><b></b><span>Ethernet 接続済み</span></div>
-              <div class="instrument"><small>検出した機器</small><strong>TEKTRONIX MDO4104C</strong><span>192.168.10.2:4000</span></div>
-              <button>接続完了</button>
-            </div>
-            <div class="app-screen screen-discover">
-              <p class="screen-kicker">機器を検索</p><h3>LAN接続を自動判別</h3>
-              <div class="network-orbit"><i></i><b>LAN</b><i></i></div>
-              <div class="device-list"><div><span class="device-icon scope-mini">⌁</span><p><small>検出済み</small><strong>MDO4104C</strong><em>オシロスコープ</em></p><b>›</b></div><div class="fp1-row"><span class="device-icon fp1-mini">FP</span><p><small>検出済み</small><strong>PDT-FP1</strong><em>LAN計測機器</em></p><b>›</b></div></div>
-              <p class="device-status">2 台の機器を認識しました</p>
-            </div>
-            <div class="app-screen screen-wave">
-              <div class="screen-title"><div><p>波形</p><h3>CH1 · 取得中</h3></div><span class="run">RUN</span></div>
-              <div class="scope-grid"><svg viewBox="0 0 560 235" preserveAspectRatio="none"><path class="wave wave-a" /><path class="wave wave-b" /><line class="cursor c1" x1="215" y1="0" x2="215" y2="235"/><line class="cursor c2" x1="392" y1="0" x2="392" y2="235"/></svg></div>
-              <div class="chips"><span class="active">CH1  500mV</span><span>CH2</span><span>CH3</span></div>
-              <div class="actions"><button>取得</button><button class="outline">自動スケール</button></div>
-            </div>
-            <div class="app-screen screen-measure">
-              <div class="screen-title"><div><p>測定</p><h3>CH1 の測定値</h3></div><span class="run">RUN</span></div>
-              <div class="mini-wave"><svg viewBox="0 0 560 108" preserveAspectRatio="none"><path class="wave wave-a" /></svg></div>
-              <div class="metrics"><div><small>周波数</small><strong>1.000 <em>kHz</em></strong></div><div><small>P-P 値</small><strong>2.00 <em>V</em></strong></div><div><small>Δt</small><strong>500 <em>μs</em></strong></div></div>
-              <p class="stats">統計　平均 1.000 kHz　/　100 samples</p>
-            </div>
-            <div class="app-screen screen-auto">
-              <p class="screen-kicker">自動測定</p><h3>測定シーケンス</h3>
-              <div class="sequence"><div class="done"><b>✓</b> 単発取得</div><div class="done"><b>✓</b> 測定</div><div class="working"><b>3</b> 波形を保存 <i></i></div><div><b>4</b> 次の測定へ</div></div>
-              <div class="progress"><i></i></div><p class="counter">3 / 10 回 完了</p>
-              <button>実行中</button>
-            </div>
-            <nav><span class="selected">接続</span><span>概要</span><span>波形</span><span>測定</span></nav>
-          </div>
-        </div>
-      </div>
-      <div class="scope-wrap" aria-hidden="true">
-        <div class="scope-handle"></div>
-        <div class="scope-body">
-          <div class="scope-brand">TEKTRONIX <span>MDO4104C</span></div>
-          <div class="scope-display"><svg viewBox="0 0 340 150" preserveAspectRatio="none"><path class="scope-wave" /></svg><span>CH1&nbsp; 500mV&nbsp;&nbsp;&nbsp; 1.00ms</span></div>
-          <div class="scope-panel"><div class="scope-knob large"></div><div class="scope-knob"></div><div class="scope-knob"></div><div class="scope-keys"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-          <div class="scope-ports"><i></i><i></i><i></i><i></i></div>
-        </div>
-        <p>OSCILLOSCOPE</p>
-      </div>
-      <div class="fp1-wrap" aria-hidden="true"><div class="fp1-led"></div><div class="fp1-logo">PDT-FP1</div><div class="fp1-slots"><i></i><i></i><i></i></div><p>LAN MEASUREMENT DEVICE</p></div>
-      <div class="connection-cable" aria-hidden="true"><span>LAN</span><i></i><b></b></div>
-      <div class="pointer" aria-hidden="true"><i></i></div>
-      <div class="caption" aria-live="polite"></div>
-      <div class="progress-track"><i></i></div>
-      <p class="prototype-note">※ 展示用の操作イメージです。表示データはシミュレーションです。</p>
+    <main id="frame" aria-label="PDToscillo 展示会用アニメーション">
+      <canvas id="three-canvas"></canvas>
+      <div class="vignette"></div>
+      <header><span class="mark">P</span><strong>PDToscillo</strong><span class="tag">EXHIBITION CONCEPT</span></header>
+      <section id="copy" aria-live="polite"><p id="eyebrow"></p><h1 id="headline"></h1><p id="description"></p><p id="disclaimer"></p></section>
+      <div id="status"><span></span><b>LAN DISCOVERY</b><em id="device-status">STANDBY</em></div>
+      <div id="timeline"><i></i></div>
+      <p class="footnote">※ 展示用コンセプト映像です。機器の自動判別・PDT-FP1対応は将来構想を含みます。</p>
     </main>
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>
