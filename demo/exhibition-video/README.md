@@ -11,6 +11,14 @@
 
 Space キーで一時停止・再開、R キーで先頭へ戻ります。音声は、録画後にナレーションまたはBGMを重ねる想定です。
 
+## MP4の生成
+
+`render-video.ps1` は、サムネイルから45秒・1920×1080・無音のMP4を生成します。FFmpeg Essentialsが標準のwinget場所にある場合は、そのまま実行できます。
+
+```powershell
+.\render-video.ps1
+```
+
 ## サムネイル
 
 - `assets/video-thumbnail.png` — 16:9の動画用
