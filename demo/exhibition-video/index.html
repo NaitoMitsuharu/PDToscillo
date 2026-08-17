@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDToscillo | LAN Instrument Experience</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="product-pv.css" />
   </head>
   <body>
     <main id="frame" aria-label="PDToscillo 展示会用アニメーション">
       <canvas id="three-canvas"></canvas>
+      <div id="motion-stage" aria-hidden="true"></div>
       <div class="vignette"></div>
       <header><span class="mark">P</span><strong>PDToscillo</strong><span class="tag">EXHIBITION CONCEPT</span></header>
       <section id="copy" aria-live="polite"><p id="eyebrow"></p><h1 id="headline"></h1><p id="description"></p><p id="disclaimer"></p></section>
@@ -16,6 +18,6 @@
       <div id="timeline"><i></i></div>
       <p class="footnote">※ 展示用コンセプト映像です。機器の自動判別・PDT-FP1対応は将来構想を含みます。</p>
     </main>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="bootstrap.js"></script>
   </body>
 </html>

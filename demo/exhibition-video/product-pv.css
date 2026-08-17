@@ -1,0 +1,21 @@
+body.pv2{background:#050b14;color:#eff8ff}
+.pv2 #three-canvas,.pv2 .vignette,.pv2 header,.pv2 #copy,.pv2 #status,.pv2 #timeline,.pv2 .footnote{display:none}
+#motion-stage{display:none;position:absolute;inset:0}
+.pv2 #motion-stage{display:block}
+.pv2 svg{display:block;width:100%;height:100%;font-family:"Noto Sans JP","Yu Gothic UI",sans-serif}
+.pv2 .label{font-family:"DM Mono","Consolas",monospace;letter-spacing:.16em}
+.pv2 .scene{opacity:0}
+.pv2 .headline{font-size:64px;font-weight:700;letter-spacing:-.045em;fill:#f4fbff}
+.pv2 .sub{font-size:26px;fill:#9fb8c9}
+.pv2 .micro{font-size:18px;fill:#88a4b6}
+.pv2 .cyan{fill:#55e8dc}.pv2 .stroke-cyan{stroke:#55e8dc}.pv2 .orange{fill:#ffb45d}.pv2 .red{fill:#ff657a}
+.pv2 .panel{fill:#0d1d2b;stroke:#28465a;stroke-width:2}.pv2 .glass{fill:#07121d;stroke:#3a6277;stroke-width:2}
+.pv2 .shadow{fill:#000;opacity:.28;filter:url(#blur)}
+.pv2 .worker-line{fill:none;stroke:#dceaf1;stroke-width:28;stroke-linecap:round;stroke-linejoin:round}
+.pv2 .worker-joint{fill:#dceaf1}.pv2 .suit{fill:#28708b}.pv2 .skin{fill:#d5aa86}
+.pv2 .cable{fill:none;stroke:#5be9dc;stroke-width:12;stroke-linecap:round;filter:url(#glow)}
+.pv2 .cable-muted{fill:none;stroke:#687b87;stroke-width:10;stroke-linecap:round}
+.pv2 .screen-grid{stroke:#164358;stroke-width:2}.pv2 .wave{fill:none;stroke:#59f0df;stroke-width:7;filter:url(#glow)}
+.pv2 .scene-tag{fill:#55e8dc;font-size:17px;font-weight:700;letter-spacing:.18em}
+.pv2 .badge{fill:#0b2c35;stroke:#55e8dc;stroke-width:2}.pv2 .badge-text{fill:#8ff7ed;font-size:20px;font-weight:700}
+.pv2 .cut{fill:#58eadf;opacity:0}
