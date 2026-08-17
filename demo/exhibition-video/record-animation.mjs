@@ -50,6 +50,6 @@ try {
       await page.close();
     } finally { rmSync(frames, { recursive: true, force: true }); }
   }
-  await run(ffmpeg, ['-y', '-ss', '00:00:34', '-i', join(root, 'PDToscillo-product-pv.mp4'), '-vf', 'crop=1080:1080:0:0', '-frames:v', '1', join(root, 'assets', 'project-thumbnail.png')]);
+  await run(ffmpeg, ['-y', '-ss', '00:00:36', '-i', join(root, 'PDToscillo-product-pv.mp4'), '-vf', 'crop=1080:1080:840:0', '-frames:v', '1', join(root, 'assets', 'project-thumbnail.png')]);
   await browser.close();
 } finally { server.close(); }
