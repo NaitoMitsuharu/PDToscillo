@@ -105,12 +105,16 @@ class ConnectionScreenTest {
     }
 
     @Test
-    fun `接続直後は読み取り専用モードが有効になっている`() {
+    fun `接続直後は見るだけモードが有効になっている`() {
         setScreen()
+        enterTarget("127.0.0.1", port.toString())
+        scrollTo("接続")
+        composeRule.onNodeWithText("接続").performClick()
+        composeRule.waitUntil(timeoutMillis = 20_000) { session.client.identity.value != null }
 
-        scrollTo("読み取り専用モード")
-        composeRule.onNodeWithText("読み取り専用モード").assertIsDisplayed()
-        composeRule.onNodeWithText("設定変更コマンドを拒否します。接続直後は必ず有効です。").assertIsDisplayed()
+        scrollTo("見るだけモード（安全）")
+        composeRule.onNodeWithText("見るだけモード（安全）").assertIsDisplayed()
+        composeRule.onNodeWithText("本体の設定は変えません（安全）").assertIsDisplayed()
         assertTrue(session.client.readOnlyMode.value)
     }
 
@@ -206,17 +210,21 @@ class ConnectionScreenTest {
     }
 
     @Test
-    fun `読み取り専用モードは解除できる`() {
+    fun `見るだけモードは解除できる`() {
         setScreen()
+        enterTarget("127.0.0.1", port.toString())
+        scrollTo("接続")
+        composeRule.onNodeWithText("接続").performClick()
+        composeRule.waitUntil(timeoutMillis = 20_000) { session.client.identity.value != null }
 
-        scrollTo("読み取り専用モード")
+        scrollTo("見るだけモード（安全）")
         assertTrue(session.client.readOnlyMode.value)
 
         session.client.setReadOnlyMode(false)
         composeRule.waitForIdle()
 
         assertFalse(session.client.readOnlyMode.value)
-        composeRule.onNodeWithText("設定変更を許可しています。計測器の状態が変わります。").assertIsDisplayed()
+        composeRule.onNodeWithText("設定を変更できるようにしています").assertIsDisplayed()
     }
 
     @Test

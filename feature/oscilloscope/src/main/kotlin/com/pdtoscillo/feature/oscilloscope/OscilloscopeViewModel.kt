@@ -18,6 +18,7 @@ import com.pdtoscillo.core.network.ConnectionDiagnostics
 import com.pdtoscillo.core.network.InstrumentSession
 import com.pdtoscillo.core.scpi.ScpiClient
 import com.pdtoscillo.core.scpi.ScpiException
+import com.pdtoscillo.core.scpi.TektronixCommands
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +30,8 @@ import kotlinx.coroutines.launch
 /** 危険度の高い操作は確認を経てから実行する。 */
 enum class ConfirmableAction(val title: String, val message: String) {
     AUTOSET(
-        title = "Autoset を実行しますか？",
-        message = "本体が信号に合わせて水平軸・垂直軸・トリガを自動設定します。現在の設定は失われます。",
+        title = "自動調整しますか？",
+        message = "本体を自動調整して、波形が画面に収まるようにします。よろしいですか？",
     ),
     DEFAULT_SETUP(
         title = "初期設定に戻しますか？",
@@ -293,12 +294,19 @@ class OscilloscopeViewModel(private val session: InstrumentSession) : ViewModel(
         val action = _uiState.value.pendingConfirmation ?: return
         _uiState.value = _uiState.value.copy(pendingConfirmation = null)
         when (action) {
+            ConfirmableAction.AUTOSET -> launchBusy("オートセットを実行中") {
+                session.client.write(TektronixCommands.Autoset.execute())
+                session.client.waitForOperationComplete(AUTOSET_TIMEOUT_MILLIS)
+                loadSnapshot()
+                _uiState.value = _uiState.value.copy(notice = "本体を自動調整しました。波形画面で確認してください。")
+            }
+
             ConfirmableAction.SET_TRIGGER_LEVEL_50 -> launchBusy(action.title) {
                 session.driver.setTriggerLevelToFiftyPercent()
                 loadSnapshot()
             }
 
-            // Autoset / Default setup / Reset は Phase 5 の一括操作で扱う。
+            // Default setup / Reset は Phase 5 の一括操作で扱う。
             // ここで無言に何もしないと押した意味が分からないため、明示する。
             else -> _uiState.value = _uiState.value.copy(
                 notice = "${action.title.removeSuffix("？")}は未実装です。SCPI コンソールから実行できます。",
@@ -365,6 +373,8 @@ class OscilloscopeViewModel(private val session: InstrumentSession) : ViewModel(
     }
 
     companion object {
+        private const val AUTOSET_TIMEOUT_MILLIS = 30_000L
+
         fun factory(session: InstrumentSession): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T = OscilloscopeViewModel(session) as T

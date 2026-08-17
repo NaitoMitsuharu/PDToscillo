@@ -45,6 +45,7 @@ import com.pdtoscillo.core.model.TransportType
 import com.pdtoscillo.core.network.DiagnosticStep
 import com.pdtoscillo.core.ui.component.BusyIndicator
 import com.pdtoscillo.core.ui.component.ErrorCard
+import com.pdtoscillo.core.ui.component.LabelWithHelp
 import com.pdtoscillo.core.ui.component.LabeledValue
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.component.StatusChip
@@ -224,24 +225,29 @@ private fun StatusBanner(state: ConnectionUiState, viewModel: ConnectionViewMode
                         modifier = Modifier.weight(1f),
                     )
                 }
-                // 読み取り専用トグル（ラベル省スペース）
-                if (state.connectionState.isConnected) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = if (state.readOnlyMode) "読み取り専用" else "設定変更可",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (state.readOnlyMode) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                Color(0xFFFFD180)
-                            },
-                        )
-                        Switch(
-                            checked = !state.readOnlyMode,
-                            onCheckedChange = { viewModel.setReadOnlyMode(!it) },
-                        )
-                    }
+            }
+
+            if (state.connectionState.isConnected) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LabelWithHelp(
+                        label = "見るだけモード（安全）",
+                        help = "誤操作で本体設定を変えないための保護。変更するときだけ解除します。",
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = state.readOnlyMode,
+                        onCheckedChange = viewModel::setReadOnlyMode,
+                    )
                 }
+                Text(
+                    text = if (state.readOnlyMode) {
+                        "本体の設定は変えません（安全）"
+                    } else {
+                        "設定を変更できるようにしています"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             // LAN 状態をコンパクトに

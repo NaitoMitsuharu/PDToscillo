@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +35,7 @@ import com.pdtoscillo.core.model.ChannelTermination
 import com.pdtoscillo.core.ui.component.BusyIndicator
 import com.pdtoscillo.core.ui.component.EngineeringValueField
 import com.pdtoscillo.core.ui.component.ErrorCard
+import com.pdtoscillo.core.ui.component.LabelWithHelp
 import com.pdtoscillo.core.ui.component.LabeledValue
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.component.StatusChip
@@ -61,6 +63,7 @@ fun ChannelsScreen(viewModel: OscilloscopeViewModel, modifier: Modifier = Modifi
 
     val channels = state.snapshot.channels
     var selectedChannel by remember { mutableStateOf(1) }
+    var detailsExpanded by rememberSaveable(selectedChannel) { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier
@@ -97,7 +100,7 @@ fun ChannelsScreen(viewModel: OscilloscopeViewModel, modifier: Modifier = Modifi
         if (state.readOnlyMode) {
             item {
                 UnavailableNotice(
-                    "読み取り専用モードです。値の確認のみできます。変更するには接続画面で解除してください。",
+                    "見るだけモード（安全）です。値の確認のみできます。変更するには接続画面で解除してください。",
                 )
             }
         }
@@ -127,9 +130,17 @@ fun ChannelsScreen(viewModel: OscilloscopeViewModel, modifier: Modifier = Modifi
         }
 
         item { ChannelDisplaySection(channel, state, viewModel) }
-        item { VerticalSection(channel, state, viewModel) }
-        item { InputSection(channel, state, viewModel) }
-        item { ProbeSection(channel, state, viewModel) }
+        item { VerticalSection(channel, state, viewModel, detailsExpanded) }
+        item { InputSection(channel, state, viewModel, detailsExpanded) }
+        item {
+            OutlinedButton(
+                onClick = { detailsExpanded = !detailsExpanded },
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
+            ) { Text(if (detailsExpanded) "詳細設定を閉じる" else "詳細設定") }
+        }
+        if (detailsExpanded) {
+            item { ProbeSection(channel, state, viewModel) }
+        }
 
         item { Spacer(Modifier.height(24.dp)) }
     }
@@ -176,10 +187,16 @@ private fun ChannelDisplaySection(channel: ChannelSettings, state: OscilloscopeU
 }
 
 @Composable
-private fun VerticalSection(channel: ChannelSettings, state: OscilloscopeUiState, viewModel: OscilloscopeViewModel) {
-    SectionCard(title = "垂直軸") {
+private fun VerticalSection(
+    channel: ChannelSettings,
+    state: OscilloscopeUiState,
+    viewModel: OscilloscopeViewModel,
+    detailsExpanded: Boolean,
+) {
+    SectionCard(title = "縦軸（電圧）") {
+        LabelWithHelp("1目盛りの電圧（V/div）", "縦 1 目盛りが何ボルトか。小さくすると波形が拡大します。")
         LabeledValue(
-            "現在の V/div",
+            "現在",
             channel.verticalScale?.let { EngineeringUnits.formatToString(it, "V") } ?: "不明",
         )
         LabeledValue(
@@ -188,7 +205,7 @@ private fun VerticalSection(channel: ChannelSettings, state: OscilloscopeUiState
         )
 
         var scaleText by remember(channel.channel, channel.verticalScale) {
-            mutableStateOf(channel.verticalScale?.let { EngineeringUnits.format(it, "").value } ?: "")
+            mutableStateOf(channel.verticalScale?.toString().orEmpty())
         }
         Spacer(Modifier.height(8.dp))
         EngineeringValueField(
@@ -203,68 +220,77 @@ private fun VerticalSection(channel: ChannelSettings, state: OscilloscopeUiState
             EngineeringUnits.parse(scaleText, "V")?.let { viewModel.setVerticalScale(channel.channel, it) }
         }
 
-        Spacer(Modifier.height(12.dp))
-        LabeledValue("垂直位置", channel.verticalPosition?.let { "$it div" } ?: "不明")
-        var positionText by remember(channel.channel, channel.verticalPosition) {
-            mutableStateOf(channel.verticalPosition?.toString() ?: "")
-        }
-        EngineeringValueField(
-            label = "垂直位置",
-            text = positionText,
-            unit = "div",
-            onTextChange = { positionText = it },
-            range = MIN_POSITION_DIV..MAX_POSITION_DIV,
-            enabled = !state.readOnlyMode,
-        )
-        ApplyButton(enabled = !state.readOnlyMode && !state.busy) {
-            positionText.toDoubleOrNull()?.let { viewModel.setVerticalPosition(channel.channel, it) }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        LabeledValue("オフセット", channel.offset?.let { EngineeringUnits.formatToString(it, "V") } ?: "不明")
-        var offsetText by remember(channel.channel, channel.offset) {
-            mutableStateOf(channel.offset?.let { EngineeringUnits.format(it, "").value } ?: "")
-        }
-        EngineeringValueField(
-            label = "オフセット",
-            text = offsetText,
-            unit = "V",
-            onTextChange = { offsetText = it },
-            enabled = !state.readOnlyMode,
-        )
-        ApplyButton(enabled = !state.readOnlyMode && !state.busy) {
-            EngineeringUnits.parse(offsetText, "V")?.let { viewModel.setOffset(channel.channel, it) }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("反転", modifier = Modifier.weight(1f))
-            Switch(
-                checked = channel.inverted == true,
-                onCheckedChange = { viewModel.setInvert(channel.channel, it) },
-                enabled = !state.readOnlyMode && !state.busy,
+        if (detailsExpanded) {
+            Spacer(Modifier.height(12.dp))
+            LabeledValue("縦位置", channel.verticalPosition?.let { "$it div" } ?: "不明")
+            var positionText by remember(channel.channel, channel.verticalPosition) {
+                mutableStateOf(channel.verticalPosition?.toString() ?: "")
+            }
+            EngineeringValueField(
+                label = "縦位置",
+                text = positionText,
+                unit = "div",
+                onTextChange = { positionText = it },
+                range = MIN_POSITION_DIV..MAX_POSITION_DIV,
+                enabled = !state.readOnlyMode,
             )
+            ApplyButton(enabled = !state.readOnlyMode && !state.busy) {
+                positionText.toDoubleOrNull()?.let { viewModel.setVerticalPosition(channel.channel, it) }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            LabeledValue("オフセット", channel.offset?.let { EngineeringUnits.formatToString(it, "V") } ?: "不明")
+            var offsetText by remember(channel.channel, channel.offset) {
+                mutableStateOf(channel.offset?.toString().orEmpty())
+            }
+            EngineeringValueField(
+                label = "オフセット",
+                text = offsetText,
+                unit = "V",
+                onTextChange = { offsetText = it },
+                enabled = !state.readOnlyMode,
+            )
+            ApplyButton(enabled = !state.readOnlyMode && !state.busy) {
+                EngineeringUnits.parse(offsetText, "V")?.let { viewModel.setOffset(channel.channel, it) }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("波形を上下反転", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = channel.inverted == true,
+                    onCheckedChange = { viewModel.setInvert(channel.channel, it) },
+                    enabled = !state.readOnlyMode && !state.busy,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun InputSection(channel: ChannelSettings, state: OscilloscopeUiState, viewModel: OscilloscopeViewModel) {
+private fun InputSection(
+    channel: ChannelSettings,
+    state: OscilloscopeUiState,
+    viewModel: OscilloscopeViewModel,
+    detailsExpanded: Boolean,
+) {
     SectionCard(title = "入力") {
-        Text("カップリング", style = MaterialTheme.typography.labelLarge)
+        LabelWithHelp("入力の結合（AC/DC）", "DC=そのまま、AC=直流成分を除いて交流だけ見ます。")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ChannelCoupling.entries.forEach { coupling ->
                 FilterChip(
                     selected = channel.coupling == coupling,
                     onClick = { viewModel.setCoupling(channel.channel, coupling) },
-                    label = { Text(coupling.displayName) },
+                    label = { Text(if (coupling == ChannelCoupling.DC_REJECT) "DC 除去" else coupling.displayName) },
                     enabled = !state.readOnlyMode && !state.busy,
                 )
             }
         }
 
+        if (!detailsExpanded) return@SectionCard
+
         Spacer(Modifier.height(12.dp))
-        Text("帯域制限", style = MaterialTheme.typography.labelLarge)
+        LabelWithHelp("帯域制限（高い周波数を抑える）", "ノイズが多いとき高域を抑えて波形を見やすくします。")
         LabeledValue(
             "現在",
             when (val limit = channel.bandwidthLimit) {
@@ -293,7 +319,7 @@ private fun InputSection(channel: ChannelSettings, state: OscilloscopeUiState, v
         }
 
         Spacer(Modifier.height(12.dp))
-        Text("終端", style = MaterialTheme.typography.labelLarge)
+        LabelWithHelp("終端（50Ω/1MΩ）", "入力の受け方。通常は 1MΩ。高周波は 50Ω を使うことがあります。")
         LabeledValue(
             "現在",
             channel.termination?.ohms?.let { EngineeringUnits.formatToString(it, "Ω") } ?: "不明",
@@ -318,8 +344,9 @@ private fun InputSection(channel: ChannelSettings, state: OscilloscopeUiState, v
 @Composable
 private fun ProbeSection(channel: ChannelSettings, state: OscilloscopeUiState, viewModel: OscilloscopeViewModel) {
     SectionCard(title = "プローブ / 補正") {
+        LabelWithHelp("プローブ倍率（10:1 等）", "プローブの目盛り換算。実物のプローブ表示に合わせます。")
         LabeledValue(
-            "減衰比",
+            "現在",
             channel.probeAttenuation?.let { "${EngineeringUnits.format(it, "").value} : 1" } ?: "不明",
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -338,7 +365,7 @@ private fun ProbeSection(channel: ChannelSettings, state: OscilloscopeUiState, v
         Spacer(Modifier.height(12.dp))
         LabeledValue("Deskew", channel.deskew?.let { EngineeringUnits.formatToString(it, "s") } ?: "不明")
         var deskewText by remember(channel.channel, channel.deskew) {
-            mutableStateOf(channel.deskew?.let { EngineeringUnits.format(it, "").value } ?: "")
+            mutableStateOf(channel.deskew?.toString().orEmpty())
         }
         EngineeringValueField(
             label = "Deskew",

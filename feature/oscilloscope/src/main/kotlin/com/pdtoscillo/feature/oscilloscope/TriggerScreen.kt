@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -34,6 +35,7 @@ import com.pdtoscillo.core.model.WaveformSource
 import com.pdtoscillo.core.ui.component.BusyIndicator
 import com.pdtoscillo.core.ui.component.EngineeringValueField
 import com.pdtoscillo.core.ui.component.ErrorCard
+import com.pdtoscillo.core.ui.component.LabelWithHelp
 import com.pdtoscillo.core.ui.component.LabeledValue
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.component.UnavailableNotice
@@ -62,6 +64,7 @@ fun TriggerScreen(viewModel: OscilloscopeViewModel, modifier: Modifier = Modifie
 
     val trigger = state.snapshot.trigger
     val supported = state.capabilities?.supportedTriggerTypes.orEmpty()
+    var detailsExpanded by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier
@@ -96,17 +99,24 @@ fun TriggerScreen(viewModel: OscilloscopeViewModel, modifier: Modifier = Modifie
         }
 
         if (state.readOnlyMode) {
-            item { UnavailableNotice("読み取り専用モードです。変更するには接続画面で解除してください。") }
+            item { UnavailableNotice("見るだけモード（安全）です。変更するには接続画面で解除してください。") }
         }
 
         item { TriggerStatusSection(trigger) }
 
         item { TriggerTypeSection(trigger, supported, state, viewModel) }
 
+        item {
+            OutlinedButton(
+                onClick = { detailsExpanded = !detailsExpanded },
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
+            ) { Text(if (detailsExpanded) "詳細設定を閉じる" else "詳細設定") }
+        }
+
         // 種別ごとに設定項目を分ける。
         val triggerType = trigger.type
         when (triggerType) {
-            TriggerType.EDGE, null -> item { EdgeTriggerSection(trigger, state, viewModel) }
+            TriggerType.EDGE, null -> item { EdgeTriggerSection(trigger, state, viewModel, detailsExpanded) }
             TriggerType.PULSE_WIDTH -> item { PulseWidthTriggerSection() }
             TriggerType.RUNT -> item { RuntTriggerSection() }
             TriggerType.TRANSITION -> item { TransitionTriggerSection() }
@@ -116,7 +126,9 @@ fun TriggerScreen(viewModel: OscilloscopeViewModel, modifier: Modifier = Modifie
             TriggerType.VIDEO -> item { VideoTriggerSection() }
         }
 
-        item { HoldoffSection(trigger, state, viewModel) }
+        if (detailsExpanded) {
+            item { HoldoffSection(trigger, state, viewModel) }
+        }
 
         item { Spacer(Modifier.height(24.dp)) }
     }
@@ -125,7 +137,11 @@ fun TriggerScreen(viewModel: OscilloscopeViewModel, modifier: Modifier = Modifie
 @Composable
 private fun TriggerStatusSection(trigger: TriggerSettings) {
     SectionCard(title = "状態") {
-        LabeledValue("トリガ状態", trigger.runState?.displayName ?: "不明")
+        LabelWithHelp(
+            "トリガ（波形を止める基準）",
+            "「この条件になったら波形を表示」という基準点。安定表示に必要です。",
+        )
+        LabeledValue("現在の状態", trigger.runState?.displayName ?: "不明")
         LabeledValue("種類", trigger.type?.displayName ?: "不明")
         LabeledValue("ソース", trigger.edgeSource?.displayName ?: trigger.edgeSourceRaw ?: "不明")
         LabeledValue("レベル", trigger.level?.let { EngineeringUnits.formatToString(it, "V") } ?: "不明")
@@ -155,13 +171,13 @@ private fun TriggerTypeSection(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text("スイープモード", style = MaterialTheme.typography.labelLarge)
+        LabelWithHelp("表示の待ち方", "Auto は条件が来なくても表示し、Normal は条件が来るまで待ちます。")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TriggerSweepMode.entries.forEach { mode ->
                 FilterChip(
                     selected = trigger.sweepMode == mode,
                     onClick = { viewModel.setTriggerSweepMode(mode) },
-                    label = { Text(mode.displayName) },
+                    label = { Text(mode.beginnerDisplayName) },
                     enabled = !state.readOnlyMode && !state.busy,
                 )
             }
@@ -171,8 +187,13 @@ private fun TriggerTypeSection(
 
 /** エッジトリガ。最も使うため、この画面だけ完全な設定項目を持つ。 */
 @Composable
-private fun EdgeTriggerSection(trigger: TriggerSettings, state: OscilloscopeUiState, viewModel: OscilloscopeViewModel) {
-    SectionCard(title = "エッジトリガ") {
+private fun EdgeTriggerSection(
+    trigger: TriggerSettings,
+    state: OscilloscopeUiState,
+    viewModel: OscilloscopeViewModel,
+    detailsExpanded: Boolean,
+) {
+    SectionCard(title = "波形の立ち上がり・立ち下がり（エッジトリガ）") {
         Text("ソース", style = MaterialTheme.typography.labelLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val channels = state.capabilities?.analogChannels ?: listOf(WaveformSource.CH1)
@@ -187,7 +208,7 @@ private fun EdgeTriggerSection(trigger: TriggerSettings, state: OscilloscopeUiSt
         }
 
         Spacer(Modifier.height(12.dp))
-        Text("スロープ", style = MaterialTheme.typography.labelLarge)
+        Text("波形の向き", style = MaterialTheme.typography.labelLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TriggerSlope.entries.forEach { slope ->
                 FilterChip(
@@ -199,23 +220,25 @@ private fun EdgeTriggerSection(trigger: TriggerSettings, state: OscilloscopeUiSt
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        Text("カップリング", style = MaterialTheme.typography.labelLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TriggerCoupling.entries.forEach { coupling ->
-                FilterChip(
-                    selected = trigger.coupling == coupling,
-                    onClick = { viewModel.setTriggerCoupling(coupling) },
-                    label = { Text(coupling.displayName) },
-                    enabled = !state.readOnlyMode && !state.busy,
-                )
+        if (detailsExpanded) {
+            Spacer(Modifier.height(12.dp))
+            LabelWithHelp("入力の結合（AC/DC）", "DC=そのまま、AC=直流成分を除いて交流だけ見ます。")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TriggerCoupling.entries.forEach { coupling ->
+                    FilterChip(
+                        selected = trigger.coupling == coupling,
+                        onClick = { viewModel.setTriggerCoupling(coupling) },
+                        label = { Text(coupling.displayName) },
+                        enabled = !state.readOnlyMode && !state.busy,
+                    )
+                }
             }
         }
 
         Spacer(Modifier.height(12.dp))
         LabeledValue("現在のレベル", trigger.level?.let { EngineeringUnits.formatToString(it, "V") } ?: "不明")
         var levelText by remember(trigger.level) {
-            mutableStateOf(trigger.level?.let { EngineeringUnits.format(it, "").value } ?: "")
+            mutableStateOf(trigger.level?.toString().orEmpty())
         }
         EngineeringValueField(
             label = "トリガレベル",
@@ -343,7 +366,7 @@ private fun HoldoffSection(trigger: TriggerSettings, state: OscilloscopeUiState,
             trigger.holdoffTime?.let { EngineeringUnits.formatToString(it, "s") } ?: "不明",
         )
         var holdoffText by remember(trigger.holdoffTime) {
-            mutableStateOf(trigger.holdoffTime?.let { EngineeringUnits.format(it, "").value } ?: "")
+            mutableStateOf(trigger.holdoffTime?.toString().orEmpty())
         }
         EngineeringValueField(
             label = "ホールドオフ時間",
@@ -365,3 +388,9 @@ private fun HoldoffSection(trigger: TriggerSettings, state: OscilloscopeUiState,
 }
 
 private const val TYPE_CHIP_LIMIT = 8
+
+private val TriggerSweepMode.beginnerDisplayName: String
+    get() = when (this) {
+        TriggerSweepMode.AUTO -> "自動（Auto）"
+        TriggerSweepMode.NORMAL -> "条件待ち（Normal）"
+    }

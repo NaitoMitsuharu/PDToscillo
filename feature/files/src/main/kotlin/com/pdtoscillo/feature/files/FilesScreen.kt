@@ -115,7 +115,7 @@ fun FilesScreen(viewModel: FilesViewModel, modifier: Modifier = Modifier) {
         item {
             SectionCard(title = "本体へ保存") {
                 if (state.readOnlyMode) {
-                    UnavailableNotice("読み取り専用モードです。保存するには接続画面で解除してください。")
+                    UnavailableNotice("見るだけモード（安全）です。保存するには接続画面で解除してください。")
                 }
                 OutlinedTextField(
                     value = state.saveNameInput,

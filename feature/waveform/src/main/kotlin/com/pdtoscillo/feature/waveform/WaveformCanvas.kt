@@ -266,35 +266,41 @@ private fun DrawScope.drawCursors(cursors: CursorState, window: ViewWindow, text
 
 /** 画面の四隅へ現在の表示範囲を出す。単位付きで表示する。 */
 private fun DrawScope.drawAxisLabels(window: ViewWindow, textMeasurer: TextMeasurer, style: TextStyle) {
+    val startLabel = EngineeringUnits.formatToString(window.startTime, "s")
+    val startLayout = textMeasurer.measure(startLabel, style)
+    val bottomTop = size.height - startLayout.size.height - LABEL_EDGE_MARGIN
     drawText(
         textMeasurer = textMeasurer,
-        text = EngineeringUnits.formatToString(window.startTime, "s"),
-        topLeft = Offset(4f, size.height - LABEL_BOTTOM_MARGIN),
+        text = startLabel,
+        topLeft = Offset(LABEL_EDGE_MARGIN, bottomTop),
         style = style,
     )
     val endLabel = EngineeringUnits.formatToString(window.endTime, "s")
-    val endWidth = textMeasurer.measure(endLabel, style).size.width
+    val endLayout = textMeasurer.measure(endLabel, style)
     drawText(
         textMeasurer = textMeasurer,
         text = endLabel,
-        topLeft = Offset(size.width - endWidth - 4f, size.height - LABEL_BOTTOM_MARGIN),
+        topLeft = Offset(size.width - endLayout.size.width - LABEL_EDGE_MARGIN, bottomTop),
         style = style,
     )
     drawText(
         textMeasurer = textMeasurer,
         text = EngineeringUnits.formatToString(window.maxVolts, "V"),
-        topLeft = Offset(4f, 4f),
+        topLeft = Offset(LABEL_EDGE_MARGIN, LABEL_EDGE_MARGIN),
         style = style,
     )
+    val minLabel = EngineeringUnits.formatToString(window.minVolts, "V")
+    val minLayout = textMeasurer.measure(minLabel, style)
     drawText(
         textMeasurer = textMeasurer,
-        text = EngineeringUnits.formatToString(window.minVolts, "V"),
-        topLeft = Offset(4f, size.height - LABEL_BOTTOM_MARGIN * 2),
+        text = minLabel,
+        topLeft = Offset(LABEL_EDGE_MARGIN, bottomTop - minLayout.size.height - LABEL_ROW_GAP),
         style = style,
     )
 }
 
 private const val TRACE_WIDTH = 1.8f
 private const val OFF_SCREEN_MARGIN = 4f
-private const val LABEL_BOTTOM_MARGIN = 16f
+private const val LABEL_EDGE_MARGIN = 4f
+private const val LABEL_ROW_GAP = 2f
 private const val HALF = 0.5f

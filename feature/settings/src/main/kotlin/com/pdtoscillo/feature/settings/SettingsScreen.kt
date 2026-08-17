@@ -56,6 +56,7 @@ fun SettingsScreen(session: InstrumentSession, modifier: Modifier = Modifier) {
     val capabilities by session.client.capabilities.collectAsStateWithLifecycle()
 
     var showRawCommands by remember { mutableStateOf(false) }
+    var showGlossary by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier
@@ -108,11 +109,36 @@ fun SettingsScreen(session: InstrumentSession, modifier: Modifier = Modifier) {
             SectionCard(title = "接続中の機器") {
                 LabeledValue("モデル", identity?.model?.ifBlank { "不明" } ?: "未接続")
                 LabeledValue("ファームウェア", identity?.firmwareVersion ?: "不明")
-                LabeledValue("読み取り専用", if (readOnly) "有効" else "解除中")
+                LabeledValue("見るだけモード（安全）", if (readOnly) "有効" else "解除中")
                 capabilities?.let {
                     LabeledValue("検出方法", it.detectionSource.name)
                     if (it.undeterminedFeatures.isNotEmpty()) {
                         LabeledValue("判定できなかった機能", it.undeterminedFeatures.joinToString())
+                    }
+                }
+            }
+        }
+
+        item {
+            SectionCard(title = "用語集（オシロスコープの言葉）") {
+                Text(
+                    text = "画面に出てくる主な言葉を、短い説明で確認できます。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = { showGlossary = !showGlossary },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
+                ) { Text(if (showGlossary) "用語集を閉じる" else "用語集を開く") }
+                if (showGlossary) {
+                    OSCILLOSCOPE_GLOSSARY.forEach { (term, description) ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(term, style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -181,3 +207,15 @@ fun SettingsScreen(session: InstrumentSession, modifier: Modifier = Modifier) {
 }
 
 private const val LOG_PREVIEW_COUNT = 20
+
+private val OSCILLOSCOPE_GLOSSARY = listOf(
+    "取り込み（Acquisition）" to "波形を何回、どうやって取り込むかの設定です。",
+    "横軸（時間）" to "画面の横方向＝時間です。1 目盛りが何秒かを決めます。",
+    "縦軸（電圧）" to "画面の縦方向＝電圧です。1 目盛りが何ボルトかを決めます。",
+    "トリガ（波形を止める基準）" to "条件を決めて、波形を安定して表示するための基準点です。",
+    "サンプルレート" to "1 秒間に測定する回数です。速い信号ほど大きい値が要ります。",
+    "記録点数" to "1 回の取り込みで記録する点の数です。",
+    "入力の結合（AC/DC）" to "DC は信号をそのまま、AC は直流成分を除いて表示します。",
+    "プローブ倍率" to "実物のプローブに書かれた 1:1、10:1 などの倍率に合わせます。",
+    "見るだけモード（安全）" to "誤操作で本体設定を変えないための保護です。変更するときだけ解除します。",
+)

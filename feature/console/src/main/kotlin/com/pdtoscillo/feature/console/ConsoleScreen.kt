@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pdtoscillo.core.scpi.TektronixCommands
 import com.pdtoscillo.core.ui.component.ErrorCard
+import com.pdtoscillo.core.ui.component.LabelWithHelp
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.component.StatusChip
 import com.pdtoscillo.core.ui.component.UnavailableNotice
@@ -86,18 +87,18 @@ fun ConsoleScreen(viewModel: ConsoleViewModel, modifier: Modifier = Modifier) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             StatusChip(
-                text = if (state.readOnlyMode) "読み取り専用" else "設定変更可",
+                text = if (state.readOnlyMode) "見るだけ（安全）" else "設定変更可",
                 color = if (state.readOnlyMode) Color(0xFFB0BEC5) else Color(0xFFFFD180),
             )
             Spacer(Modifier.fillMaxWidth(0.02f))
-            Text(
-                text = "設定変更を許可",
-                style = MaterialTheme.typography.bodySmall,
+            LabelWithHelp(
+                label = "見るだけモード",
+                help = "誤操作で本体設定を変えないための保護。変更するときだけ解除します。",
                 modifier = Modifier.weight(1f),
             )
             Switch(
-                checked = !state.readOnlyMode,
-                onCheckedChange = { viewModel.setReadOnlyMode(!it) },
+                checked = state.readOnlyMode,
+                onCheckedChange = viewModel::setReadOnlyMode,
             )
         }
 
@@ -315,7 +316,7 @@ private fun InputRow(state: ConsoleUiState, viewModel: ConsoleViewModel, showScr
                             "確認が必要なコマンドです"
 
                         state.inputIsQuery -> "問い合わせとして送ります"
-                        state.readOnlyMode -> "設定変更は読み取り専用モードのため拒否されます"
+                        state.readOnlyMode -> "設定変更は見るだけモード（安全）のため拒否されます"
                         else -> "設定変更として送ります"
                     },
                 )

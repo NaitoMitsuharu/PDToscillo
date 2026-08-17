@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pdtoscillo.core.common.EngineeringUnits
 import com.pdtoscillo.core.ui.component.BusyIndicator
 import com.pdtoscillo.core.ui.component.ErrorCard
+import com.pdtoscillo.core.ui.component.LabelWithHelp
 import com.pdtoscillo.core.ui.component.LabeledValue
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.theme.MinTouchTarget
@@ -170,39 +171,54 @@ private fun ControlPanel(state: WaveformUiState, viewModel: WaveformViewModel, m
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = viewModel::captureOnce,
                 enabled = !state.busy,
-                modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
             ) { Text("取得") }
             OutlinedButton(
                 onClick = viewModel::autoScale,
-                modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
-            ) { Text("自動スケール") }
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
+            ) { Text("画面に合わせる（表示だけ）") }
         }
+        LabelWithHelp(
+            label = "表示だけを調整",
+            help = "取得済みの波形が収まるようにアプリの表示範囲だけを変えます。本体の設定は変えません。",
+        )
 
         SectionCard(title = "チャンネル") {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                state.traces.forEach { trace ->
-                    FilterChip(
-                        selected = trace.visible,
-                        onClick = { viewModel.toggleTrace(trace.source) },
-                        label = { Text(trace.source.displayName) },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .background(
-                                        com.pdtoscillo.core.ui.theme.TraceColors.forAnalogChannel(
-                                            com.pdtoscillo.core.model.WaveformSource.ANALOG_CHANNELS
-                                                .indexOf(trace.source) + 1,
-                                        ),
-                                        CircleShape,
-                                    ),
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                state.traces.chunked(CHANNELS_PER_ROW).forEach { rowTraces ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        rowTraces.forEach { trace ->
+                            FilterChip(
+                                selected = trace.visible,
+                                onClick = { viewModel.toggleTrace(trace.source) },
+                                label = { Text(trace.source.displayName) },
+                                modifier = Modifier.weight(1f),
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .background(
+                                                com.pdtoscillo.core.ui.theme.TraceColors.forAnalogChannel(
+                                                    com.pdtoscillo.core.model.WaveformSource.ANALOG_CHANNELS
+                                                        .indexOf(trace.source) + 1,
+                                                ),
+                                                CircleShape,
+                                            ),
+                                    )
+                                },
                             )
-                        },
-                    )
+                        }
+                        repeat(CHANNELS_PER_ROW - rowTraces.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
                 }
             }
         }
@@ -265,7 +281,7 @@ private fun ControlPanel(state: WaveformUiState, viewModel: WaveformViewModel, m
             }
             if (state.readOnlyMode) {
                 Text(
-                    text = "読み取り専用モードでは転送設定を変更できません。",
+                    text = "見るだけモード（安全）では転送設定を変更できません。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -322,7 +338,8 @@ private fun ControlPanel(state: WaveformUiState, viewModel: WaveformViewModel, m
 
 @Composable
 private fun CursorSection(state: WaveformUiState, viewModel: WaveformViewModel) {
-    SectionCard(title = "カーソル") {
+    SectionCard(title = "測る線（時間差 / 電圧差）") {
+        LabelWithHelp("カーソル", "2 本の線で、時間差・電圧差を読み取れます。")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = state.cursors.verticalEnabled,
@@ -371,6 +388,7 @@ private const val PORTRAIT_PLOT_WEIGHT = 1.3f
 private const val ZOOM_IN = 1.5
 private const val ZOOM_OUT = 1.0 / 1.5
 private const val EXPORT_PREVIEW_COUNT = 3
+private const val CHANNELS_PER_ROW = 2
 
 /** トリガ位置は時間軸の 0 秒。プリアンブルの XZERO と PT_OFF がその基準になっている。 */
 private const val TRIGGER_TIME_AT_ZERO = 0.0

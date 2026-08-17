@@ -203,7 +203,7 @@ class WaveformScreenTest {
             viewModel.uiState.value.window != null
         }
 
-        composeRule.onNodeWithText("自動スケール").performScrollTo().performClick()
+        composeRule.onNodeWithText("画面に合わせる（表示だけ）").performScrollTo().performClick()
         composeRule.waitForIdle()
 
         val window = viewModel.uiState.value.window!!

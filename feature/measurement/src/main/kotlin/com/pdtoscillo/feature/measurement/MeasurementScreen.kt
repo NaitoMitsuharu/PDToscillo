@@ -35,6 +35,7 @@ import com.pdtoscillo.core.common.EngineeringUnits
 import com.pdtoscillo.core.scpi.MeasurementSlot
 import com.pdtoscillo.core.ui.component.BusyIndicator
 import com.pdtoscillo.core.ui.component.ErrorCard
+import com.pdtoscillo.core.ui.component.LabelWithHelp
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.component.UnavailableNotice
 import com.pdtoscillo.core.ui.theme.MinTouchTarget
@@ -92,7 +93,7 @@ fun MeasurementScreen(viewModel: MeasurementViewModel, modifier: Modifier = Modi
         if (state.readOnlyMode) {
             item {
                 UnavailableNotice(
-                    "読み取り専用モードです。測定値の確認のみできます。追加・削除には解除が必要です。",
+                    "見るだけモード（安全）です。測定値の確認のみできます。追加・削除には解除が必要です。",
                 )
             }
         }
@@ -105,7 +106,11 @@ fun MeasurementScreen(viewModel: MeasurementViewModel, modifier: Modifier = Modi
                 trailing = { TextButton(onClick = viewModel::refresh) { Text("更新") } },
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("統計を取る", modifier = Modifier.weight(1f))
+                    LabelWithHelp(
+                        label = "統計を取る",
+                        help = "測定を繰り返して、平均・最小・最大を表示します。",
+                        modifier = Modifier.weight(1f),
+                    )
                     Switch(
                         checked = state.statisticsEnabled,
                         onCheckedChange = viewModel::setStatisticsEnabled,

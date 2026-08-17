@@ -78,7 +78,7 @@ fun AutomationScreen(viewModel: AutomationViewModel, modifier: Modifier = Modifi
         if (state.readOnlyMode) {
             item {
                 UnavailableNotice(
-                    "読み取り専用モードです。自動測定は Single 実行など設定変更を伴うため、" +
+                    "見るだけモード（安全）です。自動測定は 1 回取り込みなど設定変更を伴うため、" +
                         "接続画面で解除してください。",
                 )
             }

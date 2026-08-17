@@ -19,7 +19,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +35,7 @@ import com.pdtoscillo.core.model.AcquisitionMode
 import com.pdtoscillo.core.model.TriggerRunState
 import com.pdtoscillo.core.ui.component.BusyIndicator
 import com.pdtoscillo.core.ui.component.ErrorCard
+import com.pdtoscillo.core.ui.component.LabelWithHelp
 import com.pdtoscillo.core.ui.component.LabeledValue
 import com.pdtoscillo.core.ui.component.SectionCard
 import com.pdtoscillo.core.ui.component.StatusChip
@@ -50,6 +54,7 @@ const val OVERVIEW_LIST_TAG = "overviewScreenList"
 @Composable
 fun OverviewScreen(viewModel: OscilloscopeViewModel, onOpenChannels: () -> Unit, modifier: Modifier = Modifier) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var guideDismissed by rememberSaveable { mutableStateOf(false) }
 
     // 画面が見えている間だけ取得する。バックグラウンドで本体との通信を占有しない。
     LifecycleResumeEffect(Unit) {
@@ -103,6 +108,15 @@ fun OverviewScreen(viewModel: OscilloscopeViewModel, onOpenChannels: () -> Unit,
             }
         }
 
+        item {
+            AutosetSection(
+                state = state,
+                viewModel = viewModel,
+                showGuide = !guideDismissed,
+                onDismissGuide = { guideDismissed = true },
+            )
+        }
+
         item { InstrumentSection(state) }
 
         item { AcquisitionControlSection(state, viewModel) }
@@ -120,31 +134,75 @@ fun OverviewScreen(viewModel: OscilloscopeViewModel, onOpenChannels: () -> Unit,
 }
 
 @Composable
+private fun AutosetSection(state: OscilloscopeUiState, viewModel: OscilloscopeViewModel, showGuide: Boolean, onDismissGuide: () -> Unit) {
+    SectionCard(
+        title = "はじめに",
+        trailing = if (showGuide) {
+            { TextButton(onClick = onDismissGuide) { Text("閉じる") } }
+        } else {
+            null
+        },
+    ) {
+        if (showGuide) {
+            Text(
+                text = "まず「自動で見やすくする」を押すと、波形が画面に収まります。",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        Button(
+            onClick = { viewModel.requestConfirmation(ConfirmableAction.AUTOSET) },
+            enabled = !state.readOnlyMode && !state.busy,
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
+        ) { Text("自動で見やすくする（オートセット）") }
+        LabelWithHelp(
+            label = "本体の設定を自動調整します",
+            help = "横軸・縦軸・トリガを信号に合わせます。波形画面の「画面に合わせる」は表示だけを変えます。",
+        )
+        if (state.readOnlyMode) {
+            Spacer(Modifier.height(8.dp))
+            UnavailableNotice("見るだけモードのため実行できません。解除しますか？")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("設定を変更できるようにします", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = false,
+                    onCheckedChange = { viewModel.setReadOnlyMode(!it) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun InstrumentSection(state: OscilloscopeUiState) {
+    var detailsExpanded by rememberSaveable { mutableStateOf(false) }
     SectionCard(
         title = "機器",
         trailing = {
             StatusChip(
-                text = if (state.readOnlyMode) "読み取り専用" else "設定変更可",
+                text = if (state.readOnlyMode) "見るだけ（安全）" else "設定変更可",
                 color = if (state.readOnlyMode) Color(0xFFB0BEC5) else Color(0xFFFFD180),
             )
         },
     ) {
         LabeledValue("モデル", state.identity?.model?.ifBlank { "不明" } ?: "未接続")
-        LabeledValue("シリアル番号", state.identity?.serialNumber ?: "不明")
-        LabeledValue("ファームウェア", state.identity?.firmwareVersion ?: "不明")
-        state.capabilities?.let { capabilities ->
-            LabeledValue("世代", capabilities.family.name)
-            LabeledValue(
-                "チャンネル",
-                "アナログ ${capabilities.analogChannelCount} / デジタル ${capabilities.digitalChannelCount}",
-            )
+        TextButton(onClick = { detailsExpanded = !detailsExpanded }) {
+            Text(if (detailsExpanded) "詳しい情報を閉じる" else "詳しい情報")
         }
-        state.lastResponseMillis?.let {
-            LabeledValue("通信遅延", "$it ms")
-        }
-        if (state.snapshot.elapsedMillis > 0) {
-            LabeledValue("一括取得にかかった時間", "${state.snapshot.elapsedMillis} ms")
+        if (detailsExpanded) {
+            LabeledValue("シリアル番号", state.identity?.serialNumber ?: "不明")
+            LabeledValue("ファームウェア", state.identity?.firmwareVersion ?: "不明")
+            state.capabilities?.let { capabilities ->
+                LabeledValue("世代", capabilities.family.name)
+                LabeledValue(
+                    "チャンネル",
+                    "アナログ ${capabilities.analogChannelCount} / デジタル ${capabilities.digitalChannelCount}",
+                )
+            }
+            state.lastResponseMillis?.let { LabeledValue("通信遅延", "$it ms") }
+            if (state.snapshot.elapsedMillis > 0) {
+                LabeledValue("一括取得にかかった時間", "${state.snapshot.elapsedMillis} ms")
+            }
         }
     }
 }
@@ -153,23 +211,23 @@ private fun InstrumentSection(state: OscilloscopeUiState) {
 private fun AcquisitionControlSection(state: OscilloscopeUiState, viewModel: OscilloscopeViewModel) {
     val acquisition = state.snapshot.acquisition
     SectionCard(
-        title = "Acquisition",
+        title = "取り込み（Acquisition）",
         trailing = {
             val running = acquisition.running
             StatusChip(
                 text = when (running) {
-                    true -> "Run"
-                    false -> "Stop"
+                    true -> "連続"
+                    false -> "停止"
                     null -> "不明"
                 },
                 color = if (running == true) Color(0xFF69F0AE) else Color(0xFFB0BEC5),
             )
         },
     ) {
-        LabeledValue("モード", acquisition.mode?.displayName ?: "不明")
+        LabeledValue("モード", acquisition.mode?.beginnerDisplayName ?: "不明")
         LabeledValue("停止条件", acquisition.stopAfter?.displayName ?: "不明")
         if (acquisition.mode?.usesAverageCount == true) {
-            LabeledValue("Average 回数", acquisition.averageCount?.toString() ?: "不明")
+            LabeledValue("平均化の回数", acquisition.averageCount?.toString() ?: "不明")
         }
         LabeledValue("取得回数", acquisition.acquisitionCount?.toString() ?: "不明")
 
@@ -179,38 +237,38 @@ private fun AcquisitionControlSection(state: OscilloscopeUiState, viewModel: Osc
                 onClick = viewModel::run,
                 enabled = !state.readOnlyMode && !state.busy,
                 modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
-            ) { Text("Run") }
+            ) { Text("連続") }
             OutlinedButton(
                 onClick = viewModel::stop,
                 enabled = !state.readOnlyMode && !state.busy,
                 modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
-            ) { Text("Stop") }
+            ) { Text("停止") }
             OutlinedButton(
                 onClick = viewModel::single,
                 enabled = !state.readOnlyMode && !state.busy,
                 modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
-            ) { Text("Single") }
+            ) { Text("1 回") }
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(
             onClick = viewModel::forceTrigger,
             enabled = !state.readOnlyMode && !state.busy,
             modifier = Modifier.fillMaxWidth().heightIn(min = MinTouchTarget),
-        ) { Text("Force Trigger") }
+        ) { Text("強制取り込み") }
 
         if (state.readOnlyMode) {
             Spacer(Modifier.height(8.dp))
-            UnavailableNotice("読み取り専用モードのため操作できません。接続画面で解除してください。")
+            UnavailableNotice("見るだけモード（安全）のため操作できません。接続画面で解除してください。")
         }
 
         Spacer(Modifier.height(12.dp))
-        Text("モード切替", style = MaterialTheme.typography.labelLarge)
+        LabelWithHelp("取り込み方法", "波形を何回、どうやって取り込むかの設定です。")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AcquisitionMode.entries.take(MODE_CHIPS).forEach { mode ->
                 FilterChip(
                     selected = acquisition.mode == mode,
                     onClick = { viewModel.setAcquisitionMode(mode) },
-                    label = { Text(mode.displayName) },
+                    label = { Text(mode.beginnerDisplayName) },
                     enabled = !state.readOnlyMode && !state.busy,
                 )
             }
@@ -221,27 +279,34 @@ private fun AcquisitionControlSection(state: OscilloscopeUiState, viewModel: Osc
 @Composable
 private fun HorizontalSection(state: OscilloscopeUiState) {
     val horizontal = state.snapshot.horizontal
-    SectionCard(title = "水平軸") {
+    var detailsExpanded by rememberSaveable { mutableStateOf(false) }
+    SectionCard(title = "横軸（時間）") {
+        LabelWithHelp("1目盛りの時間", "画面の横方向＝時間です。1 目盛りが何秒かを決めます。")
         LabeledValue(
-            "時間軸",
+            "現在",
             horizontal.scaleSecondsPerDivision?.let { "${EngineeringUnits.formatToString(it, "s")}/div" } ?: "不明",
         )
         LabeledValue(
             "画面全体",
             horizontal.totalTimeSpan?.let { EngineeringUnits.formatToString(it, "s") } ?: "不明",
         )
-        LabeledValue("水平位置", horizontal.positionPercent?.let { "$it %" } ?: "不明")
-        LabeledValue("レコード長", horizontal.recordLength?.toString() ?: "不明")
-        LabeledValue(
-            "サンプルレート",
-            horizontal.sampleRate?.let { EngineeringUnits.formatToString(it, "S/s") } ?: "不明",
-        )
+        TextButton(onClick = { detailsExpanded = !detailsExpanded }) {
+            Text(if (detailsExpanded) "詳しい情報を閉じる" else "詳しい情報")
+        }
+        if (detailsExpanded) {
+            LabeledValue("横位置", horizontal.positionPercent?.let { "$it %" } ?: "不明")
+            LabelWithHelp("記録点数", "1 回の取り込みで記録する点の数です。")
+            LabeledValue("現在", horizontal.recordLength?.toString() ?: "不明")
+            LabelWithHelp("サンプルレート（1秒の測定回数）", "1 秒間に何回測るか。速い信号ほど大きい値が要ります。")
+            LabeledValue("現在", horizontal.sampleRate?.let { EngineeringUnits.formatToString(it, "S/s") } ?: "不明")
+        }
     }
 }
 
 @Composable
 private fun TriggerSection(state: OscilloscopeUiState) {
     val trigger = state.snapshot.trigger
+    var detailsExpanded by rememberSaveable { mutableStateOf(false) }
     SectionCard(
         title = "トリガ",
         trailing = {
@@ -256,16 +321,19 @@ private fun TriggerSection(state: OscilloscopeUiState) {
             )
         },
     ) {
+        LabelWithHelp("トリガ（波形を止める基準）", "「この条件になったら波形を表示」という基準点。安定表示に必要です。")
         LabeledValue("種類", trigger.type?.displayName ?: "不明")
-        LabeledValue("モード", trigger.sweepMode?.displayName ?: "不明")
         LabeledValue("ソース", trigger.edgeSource?.displayName ?: trigger.edgeSourceRaw ?: "不明")
-        LabeledValue("スロープ", trigger.slope?.displayName ?: "不明")
-        LabeledValue("カップリング", trigger.coupling?.displayName ?: "不明")
         LabeledValue("レベル", trigger.level?.let { EngineeringUnits.formatToString(it, "V") } ?: "不明")
-        LabeledValue(
-            "ホールドオフ",
-            trigger.holdoffTime?.let { EngineeringUnits.formatToString(it, "s") } ?: "不明",
-        )
+        TextButton(onClick = { detailsExpanded = !detailsExpanded }) {
+            Text(if (detailsExpanded) "詳しい情報を閉じる" else "詳しい情報")
+        }
+        if (detailsExpanded) {
+            LabeledValue("モード", trigger.sweepMode?.displayName ?: "不明")
+            LabeledValue("傾き", trigger.slope?.displayName ?: "不明")
+            LabeledValue("入力の結合（AC/DC）", trigger.coupling?.displayName ?: "不明")
+            LabeledValue("ホールドオフ", trigger.holdoffTime?.let { EngineeringUnits.formatToString(it, "s") } ?: "不明")
+        }
         if (trigger.runState == TriggerRunState.UNKNOWN && trigger.runStateRaw != null) {
             Spacer(Modifier.height(8.dp))
             UnavailableNotice("トリガ状態の応答を解釈できませんでした: ${trigger.runStateRaw}")
@@ -335,3 +403,12 @@ private fun RefreshSection(state: OscilloscopeUiState, viewModel: OscilloscopeVi
 }
 
 private const val MODE_CHIPS = 4
+
+private val AcquisitionMode.beginnerDisplayName: String
+    get() = when (this) {
+        AcquisitionMode.SAMPLE -> "通常（Sample）"
+        AcquisitionMode.PEAK_DETECT -> "ピーク検出"
+        AcquisitionMode.HI_RES -> "高分解能"
+        AcquisitionMode.AVERAGE -> "平均化"
+        AcquisitionMode.ENVELOPE -> "包絡線"
+    }
